@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.1/f
 // --- LISTA BLANCA DE ADMINISTRADORES ---
 // Solo estos correos podrán ver la pantalla. ¡Edítalo!
 const ADMINS = [
-    "nicolizaso@ejemplo.com", 
+    "nicolaslizaso@outlook.com", 
     "cliente@financiera.com"
 ];
 
