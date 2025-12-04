@@ -1,0 +1,150 @@
+/* --- RESET Y BASES --- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f5f5f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  color: #342E2E;
+}
+
+/* --- CONTENEDOR PRINCIPAL (TARJETA) --- */
+.contenedor {
+  background-color: white;
+  width: 100%;
+  max-width: 400px;
+  padding: 40px 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  margin: 20px;
+  position: relative; /* Para el loader o alertas */
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* --- BOTONES DE OPCIONES INICIALES --- */
+.inicio-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.inicio-opciones button {
+  background-color: white;
+  color: #342E2E;
+  border: 2px solid #342E2E;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.inicio-opciones button:hover {
+  background-color: #342E2E;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* --- FORMULARIOS --- */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+input {
+  padding: 12px 15px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+input:focus {
+  border-color: #342E2E;
+}
+
+button[type="submit"] {
+  background-color: #342E2E;
+  color: white;
+  border: none;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+}
+
+button[type="submit"]:hover {
+  background-color: #1a1a1a;
+}
+
+/* --- UTILIDADES Y NAVEGACIÓN --- */
+.hidden {
+  display: none !important;
+}
+
+.atras {
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  display: inline-block;
+  transition: color 0.2s;
+}
+
+.atras:hover {
+  color: #000;
+  text-decoration: underline;
+}
+
+p.atras {
+    text-align: center;
+    margin-top: 10px;
+}
+
+/* --- POPUP DE MENSAJES (FEEDBACK) --- */
+#popupMensaje {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  z-index: 1000;
+  text-align: center;
+  min-width: 300px;
+}
+
+/* Error feedback styling */
+#popupMensaje.error {
+    background-color: #d32f2f;
+}
+
+#popupMensaje.success {
+    background-color: #2e7d32;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
