@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administración | MB Eureka</title>
+  <style>
+    /* --- RESET Y ESTILOS GENERALES --- */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; line-height: 1.5; }
+    .hidden { display: none !important; }
+
+    /* --- CONTENEDORES --- */
+    .contenedor-app { max-width: 600px; margin: 0 auto; background-color: #ffffff; min-height: 100vh; padding-top: 20px; }
+
+    /* --- DASHBOARD --- */
+    .buscador-container { padding: 0 20px 20px 20px; }
+    #buscadorInput { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 20px; }
+    #resultadosBusqueda { padding: 0 20px; }
+
+    /* --- PAGINACIÓN --- */
+    #paginacionContainer { text-align: center; padding: 20px; }
+    #mostrarMasBtn { background-color: #007bff; color: white; padding: 10px 20px; border-radius: 20px; border: none; font-size: 16px; cursor: pointer; }
+    #mostrarMasBtn:hover { background-color: #0056b3; }
+    
+    /* --- TARJETA --- */
+    .tarjeta-resultado { background-color: #fff; border: 1px solid #dddfe2; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s; }
+    .tarjeta-resultado:hover { transform: translateY(-3px); }
+    .tarjeta-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .tarjeta-header h3 { font-size: 18px; color: #050505;}
+    .tarjeta-header span { font-size: 14px; color: #65676b; background-color: #f0f2f5; padding: 2px 6px; border-radius: 4px; }
+    .tarjeta-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid #eee; padding-top: 12px; }
+    .info-item h4 { font-size: 13px; color: #65676b; font-weight: normal; margin-bottom: 4px; }
+    .info-item p { font-size: 18px; font-weight: bold; color: #1877f2; }
+    .tarjeta-footer { margin-top: 12px; font-size: 13px; color: #65676b; text-align: center; }
+
+    /* --- VISTA DE DETALLE --- */
+    #detalleContenedor { padding: 20px; }
+    #backBtn { background: none; border: none; font-size: 16px; color: #1877f2; cursor: pointer; margin-bottom: 20px; font-weight: bold; }
+    .detalle-seccion { margin-bottom: 24px; }
+    .detalle-seccion-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1877f2; margin-bottom: 12px; }
+    .detalle-seccion h3 { font-size: 20px; padding-bottom: 8px; margin:0; }
+    .detalle-seccion-header .edit-controls button { font-size: 14px; background: #f0f2f5; border: 1px solid #ccc; border-radius: 5px; cursor: pointer; padding: 2px 8px; margin-left: 5px; }
+    .detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .detalle-item h4 { font-size: 14px; color: #65676b; }
+    .detalle-item .view-mode { font-size: 16px; font-weight: 600; }
+    .detalle-item .edit-mode { width: 100%; padding: 4px; font-size: 16px; border: 1px solid #1877f2; border-radius: 4px; }
+    .pago-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; }
+    .pago-item.pasado { color: green; } .pago-item.futuro { color: #333; } .pago-item.capital { font-weight: bold; }
+    .pago-item.actual { font-weight: bold; font-style: italic; background-color: #f0f8ff; border-left: 3px solid #1877f2; padding-left: 5px; }
+    .carpeta-container { display: flex; align-items: center; justify-content: space-between; }
+    #commentIcon { cursor: pointer; } #commentIcon.has-comment svg { fill: #1877f2; } #commentIcon svg { fill: #cccccc; width: 24px; height: 24px; }
+    
+    /* --- MODO EDICIÓN --- */
+    .edit-mode { display: none; }
+    #resumenInversion.edit-active .edit-mode { display: inline-block; }
+    #resumenInversion.edit-active .view-mode { display: none; }
+
+    /* --- MODAL --- */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; }
+    .modal-content h3 { margin-bottom: 15px; }
+    #modalTextarea { width: 100%; min-height: 120px; padding: 8px; font-family: inherit; font-size: 14px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 15px;}
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-actions button { padding: 8px 16px; font-size: 14px; cursor: pointer; border-radius: 5px; border: 1px solid #ccc; }
+    #modalGuardarBtn { background-color: #1877f2; color: white; border-color: #1877f2; }
+  </style>
+  <script type="module" src="js/auth/authGuard.js"></script>
+</head>
+<body>
+
+  <div id="dashboardContenedor" class="contenedor-app">
+    <div class="buscador-container"><input type="text" id="buscadorInput" placeholder="🔍 Buscar por nombre, DNI o carpeta..." /></div>
+    <div id="resultadosBusqueda"></div>
+    <div id="paginacionContainer">
+        <button id="mostrarMasBtn">Mostrar más</button>
+    </div>
+  </div>
+
+  <div id="detalleContenedor" class="contenedor-app hidden">
+    <button id="backBtn">&larr; Volver a la búsqueda</button>
+    <div id="detalleContent"></div>
+  </div>
+
+  <div id="commentModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3>Comentario de la Carpeta</h3>
+        <textarea id="modalTextarea" placeholder="Escribe tu nota aquí..."></textarea>
+        <div class="modal-actions">
+            <button id="modalCancelarBtn">Cancelar</button>
+            <button id="modalGuardarBtn">Guardar</button>
+        </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, doc, updateDoc, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyByH3CP-mOFo7Sz07F0E1015GtzrhyDDFI",
+      authDomain: "eureka-724e4.firebaseapp.com",
+      projectId: "eureka-724e4",
+      storageBucket: "eureka-724e4.appspot.com",
+      messagingSenderId: "505365749268",
+      appId: "1:505365749268:web:85565579899d3bff235101"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const solicitudesRef = collection(db, "solicitudes");
+    const cuotasRef = collection(db, "cuotas");
+
+    let allSolicitudes = [];
+    let cuotasMap = {};
+    let solicitudActiva = null;
+    let itemsMostrados = 0;
+    const ITEMS_POR_PAGINA = 5;
+
+    const commentIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14,17H7v-2h7V17z M17,13H7v-2h10V13z M17,9H7V7h10V9z M19,3H5C3.9,3,3,3.9,3,5v14c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2V5 C21,3.9,20.1,3,19,3z M19,19H5V5h14V19z"/></svg>`;
+    const dashboardContenedor = document.getElementById("dashboardContenedor");
+    const detalleContenedor = document.getElementById("detalleContenedor");
+    const buscadorInput = document.getElementById("buscadorInput");
+    const resultadosBusqueda = document.getElementById("resultadosBusqueda");
+    const commentModal = document.getElementById("commentModal");
+    const paginacionContainer = document.getElementById("paginacionContainer");
+    const mostrarMasBtn = document.getElementById("mostrarMasBtn");
+
+    async function cargarDatosGlobales() {
+      const solicitudesSnap = await getDocs(solicitudesRef);
+      allSolicitudes = await Promise.all(solicitudesSnap.docs.map(async docSnap => {
+        const data = docSnap.data();
+        const reingresosSnap = await getDocs(collection(docSnap.ref, "reingresos"));
+        return { id: docSnap.id, ...data, reingresos: reingresosSnap.docs.map(d => d.data()) };
+      }));
+      
+      allSolicitudes.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+      const cuotasSnap = await getDocs(cuotasRef);
+      cuotasMap = {};
+      cuotasSnap.forEach(doc => {
+        cuotasMap[doc.id] = doc.data();
+      });
+      console.log(`Datos cargados: ${allSolicitudes.length} solicitudes.`);
+      
+      mostrarMasSolicitudes();
+    }
+
+    function mostrarMasSolicitudes() {
+        const lote = allSolicitudes.slice(itemsMostrados, itemsMostrados + ITEMS_POR_PAGINA);
+        const loteHTML = lote.map(crearTarjetaHTML).join('');
+        resultadosBusqueda.innerHTML += loteHTML;
+        itemsMostrados += lote.length;
+        if (itemsMostrados >= allSolicitudes.length) {
+            mostrarMasBtn.classList.add('hidden');
+        } else {
+            mostrarMasBtn.classList.remove('hidden');
+        }
+    }
+
+    function resetearYMostrarListaInicial() {
+        resultadosBusqueda.innerHTML = '';
+        itemsMostrados = 0;
+        mostrarMasSolicitudes();
+        paginacionContainer.classList.remove('hidden');
+    }
+
+    function handleSearch() {
+        const termino = buscadorInput.value.toLowerCase().trim();
+        if (termino.length < 2) {
+            resetearYMostrarListaInicial();
+            return;
+        }
+        paginacionContainer.classList.add('hidden');
+        const resultados = allSolicitudes.filter(s => 
+            `${s.carpeta} ${s.dni || ''} ${s.nombre || ''}`.toLowerCase().includes(termino)
+        );
+        renderResultados(resultados);
+    }
+    
+    function renderResultados(resultados) {
+        resultadosBusqueda.innerHTML = resultados.length === 0
+            ? `<p style="text-align:center; color:#65676b; margin-top: 20px;">No se encontraron carpetas.</p>`
+            : resultados.map(crearTarjetaHTML).join("");
+    }
+    
+    function crearTarjetaHTML(solicitud) {
+        const proximoPago = calcularProximoPago(solicitud);
+        return `<div class="tarjeta-resultado" data-id="${solicitud.id}"><div class="tarjeta-header"><h3>${solicitud.nombre}</h3><span>${solicitud.carpeta}</span></div><div class="tarjeta-body"><div class="info-item"><h4>Capital Invertido</h4><p>${formatearCapital(solicitud.capital)}</p></div><div class="info-item"><h4>Próximo Pago (${proximoPago.mes})</h4><p>${formatearCapital(proximoPago.monto)}</p></div></div><div class="tarjeta-footer">Estado: Al día &bull; Toca para ver el detalle completo</div></div>`;
+    }
+
+    function calcularPagosPuros(solicitud) {
+        const pagos = [];
+        const { carpeta, capital, ganancia, periodos, fecha } = solicitud;
+        if (![carpeta, capital, ganancia, periodos, fecha].every(Boolean)) return [];
+        const cap = parseFloat(String(capital).replace(/[^\d,.-]/g, '').replace(',', '.'));
+        const g = parseFloat(String(ganancia).replace(',', '.')) / 100;
+        const mensual = cap * g;
+        const [y, m, d] = fecha.split('-').map(Number);
+        const fIngreso = new Date(y, m - 1, d);
+        for (let i = 0; i < parseInt(periodos); i++) {
+            const fPago = new Date(fIngreso.getFullYear(), fIngreso.getMonth() + i + 1, 1);
+            const key = `${fPago.getFullYear()}-${String(fPago.getMonth() + 1).padStart(2, '0')}`;
+            let monto = mensual;
+            if (i === 0) {
+                const diasMes = new Date(fIngreso.getFullYear(), fIngreso.getMonth() + 1, 0).getDate();
+                monto *= (diasMes - fIngreso.getDate() + 1) / diasMes;
+            }
+            pagos.push({ key, monto, esCapital: false });
+        }
+        const fDevol = new Date(fIngreso.getFullYear(), fIngreso.getMonth() + parseInt(periodos) + 1, 1);
+        const keyDev = `${fDevol.getFullYear()}-${String(fDevol.getMonth() + 1).padStart(2, '0')}`;
+        pagos.push({ key: keyDev, monto: cap, esCapital: true });
+        return pagos.sort((a, b) => a.key.localeCompare(b.key));
+    }
+
+    function calcularProximoPago(solicitud) {
+        const pagosPuros = calcularPagosPuros(solicitud);
+        const pagosReales = pagosPuros.map(p => {
+            const docId = `${solicitud.carpeta}_${p.key}`.replace(/\//g, "-");
+            return {...p, monto: cuotasMap[docId]?.monto ?? p.monto };
+        });
+        const mesActualKey = new Date().toISOString().slice(0, 7);
+        const proximo = pagosReales.find(p => p.key >= mesActualKey && !p.esCapital);
+        if (proximo) {
+            const [a, m] = proximo.key.split("-");
+            return { monto: proximo.monto, mes: `${new Date(a, m-1, 1).toLocaleString('es-ES', { month: 'short' })}. '${a.slice(2)}` };
+        }
+        const devolucion = pagosReales.find(p => p.esCapital);
+        return devolucion ? { monto: devolucion.monto, mes: `Devolución` } : { monto: 0, mes: "Finalizado" };
+    }
+
+    function handleMostrarDetalle(e) {
+        const tarjeta = e.target.closest('.tarjeta-resultado');
+        if (!tarjeta) return;
+        solicitudActiva = allSolicitudes.find(s => s.id === tarjeta.dataset.id);
+        if (solicitudActiva) {
+            renderDetalle(solicitudActiva);
+            dashboardContenedor.classList.add("hidden");
+            detalleContenedor.classList.remove("hidden");
+        }
+    }
+
+    function renderDetalle(solicitud) {
+        const pagosCalculados = calcularPagosPuros(solicitud);
+        const hoyKey = new Date().toISOString().slice(0, 7);
+        const pagosHTML = pagosCalculados.map(p => {
+            const docId = `${solicitud.carpeta}_${p.key}`.replace(/\//g, "-");
+            const montoFinal = cuotasMap[docId]?.monto ?? p.monto;
+            const clase = p.key < hoyKey ? 'pasado' : (p.key === hoyKey ? 'actual' : 'futuro');
+            const [a, m] = p.key.split("-");
+            const nombreMes = new Date(a, m-1, 1).toLocaleString('es-ES', { month: 'long' });
+            const texto = p.esCapital ? `Devolución Capital` : `Ganancia`;
+            // AQUÍ SE AGREGA EL PREFIJO "USD"
+            return `<div class="pago-item ${clase} ${p.esCapital ? 'capital' : ''}"><span>${texto} (${nombreMes} '${a.slice(2)})</span><strong>${formatearCapital(montoFinal)}</strong></div>`;
+        }).join('');
+        const detalleHTML = `<div id="resumenInversion" class="detalle-seccion"><div class="detalle-seccion-header"><h3>Resumen de Inversión</h3><div class="edit-controls"><button id="editBtn" class="view-mode">Editar</button><button id="saveBtn" class="edit-mode">Guardar</button><button id="cancelBtn" class="edit-mode">Cancelar</button></div></div><div class="detalle-grid"><div class="detalle-item"><h4>Titular</h4><p>${solicitud.nombre}</p></div><div class="detalle-item"><h4>N° Carpeta</h4><div class="carpeta-container"><p>${solicitud.carpeta}</p><span id="commentIcon" title="Agregar/Editar comentario"></span></div></div><div class="detalle-item"><h4>Capital</h4><span class="view-mode">${formatearCapital(solicitud.capital)}</span><input id="editCapital" class="edit-mode" type="number" value="${solicitud.capital}"></div><div class="detalle-item"><h4>Ganancia</h4><span class="view-mode">${solicitud.ganancia}%</span><input id="editGanancia" class="edit-mode" type="number" step="0.1" value="${solicitud.ganancia}"></div><div class="detalle-item"><h4>Períodos</h4><span class="view-mode">${solicitud.periodos} meses</span><input id="editPeriodos" class="edit-mode" type="number" value="${solicitud.periodos}"></div><div class="detalle-item"><h4>Fecha Inicio</h4><p>${formatearFecha(solicitud.fecha)}</p></div></div></div><div class="detalle-seccion"><div class="detalle-seccion-header"><h3>Calendario de Pagos</h3></div>${pagosHTML}</div>`;
+        document.getElementById("detalleContent").innerHTML = detalleHTML;
+        
+        const commentIconEl = document.getElementById('commentIcon');
+        commentIconEl.innerHTML = commentIconSVG;
+        if (solicitud.comentario) commentIconEl.classList.add('has-comment');
+        commentIconEl.addEventListener('click', abrirModalComentario);
+        document.getElementById('editBtn').addEventListener('click', activarModoEdicion);
+        document.getElementById('cancelBtn').addEventListener('click', cancelarModoEdicion);
+        document.getElementById('saveBtn').addEventListener('click', guardarCambiosCarpeta);
+    }
+    
+    function activarModoEdicion() { document.getElementById('resumenInversion').classList.add('edit-active'); }
+    function cancelarModoEdicion() {
+        document.getElementById('resumenInversion').classList.remove('edit-active');
+        document.getElementById('editCapital').value = solicitudActiva.capital;
+        document.getElementById('editGanancia').value = solicitudActiva.ganancia;
+        document.getElementById('editPeriodos').value = solicitudActiva.periodos;
+    }
+    async function guardarCambiosCarpeta() {
+        const nuevoCapital = parseFloat(document.getElementById('editCapital').value);
+        const nuevaGanancia = parseFloat(document.getElementById('editGanancia').value);
+        const nuevosPeriodos = parseInt(document.getElementById('editPeriodos').value);
+        if (isNaN(nuevoCapital) || isNaN(nuevaGanancia) || isNaN(nuevosPeriodos)) return alert("Por favor, ingresa valores numéricos válidos.");
+        const docRef = doc(db, "solicitudes", solicitudActiva.id);
+        try {
+            const pagosAnteriores = calcularPagosPuros(solicitudActiva);
+            await updateDoc(docRef, { capital: nuevoCapital, ganancia: nuevaGanancia, periodos: nuevosPeriodos });
+            const solicitudActualizada = { ...solicitudActiva, capital: nuevoCapital, ganancia: nuevaGanancia, periodos: nuevosPeriodos };
+            await sincronizarCuotasFuturas(pagosAnteriores, solicitudActualizada);
+            solicitudActiva = solicitudActualizada;
+            const idx = allSolicitudes.findIndex(s => s.id === solicitudActiva.id);
+            if (idx > -1) allSolicitudes[idx] = solicitudActiva;
+            alert("Cambios guardados y cuotas futuras actualizadas.");
+            renderDetalle(solicitudActiva);
+        } catch (error) {
+            console.error("Error al guardar cambios:", error);
+            alert("No se pudo guardar los cambios.");
+        }
+    }
+    async function sincronizarCuotasFuturas(pagosAnteriores, solicitudActualizada) {
+        const hoy = new Date();
+        const proximoMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
+        const proximoMesKey = `${proximoMes.getFullYear()}-${String(proximoMes.getMonth() + 1).padStart(2, '0')}`;
+        const pagosNuevos = calcularPagosPuros(solicitudActualizada);
+        const batch = writeBatch(db);
+        const pagosPasadosYActual = pagosAnteriores.filter(p => p.key < proximoMesKey);
+        pagosPasadosYActual.forEach(pago => {
+            const docId = `${solicitudActualizada.carpeta}_${pago.key}`.replace(/\//g, "-");
+            if (!cuotasMap[docId]) {
+                const cuotaData = { carpeta: solicitudActualizada.carpeta, mes: pago.key, monto: pago.monto, esCapital: pago.esCapital };
+                batch.set(doc(db, "cuotas", docId), cuotaData);
+                cuotasMap[docId] = cuotaData;
+            }
+        });
+        const keysNuevas = new Set(pagosNuevos.map(p => p.key));
+        const cuotasParaBorrar = pagosAnteriores.filter(p => !keysNuevas.has(p.key) && p.key >= proximoMesKey);
+        cuotasParaBorrar.forEach(pago => {
+            const docId = `${solicitudActualizada.carpeta}_${pago.key}`.replace(/\//g, "-");
+            batch.delete(doc(db, "cuotas", docId));
+            delete cuotasMap[docId];
+        });
+        const cuotasParaActualizar = pagosNuevos.filter(p => p.key >= proximoMesKey);
+        cuotasParaActualizar.forEach(pago => {
+            const docId = `${solicitudActualizada.carpeta}_${pago.key}`.replace(/\//g, "-");
+            const cuotaData = { carpeta: solicitudActualizada.carpeta, mes: pago.key, monto: pago.monto, esCapital: pago.esCapital };
+            batch.set(doc(db, "cuotas", docId), cuotaData);
+            cuotasMap[docId] = cuotaData;
+        });
+        await batch.commit();
+    }
+    function volverABusqueda() {
+        detalleContenedor.classList.add("hidden");
+        dashboardContenedor.classList.remove("hidden");
+        solicitudActiva = null;
+    }
+    function abrirModalComentario() {
+        document.getElementById('modalTextarea').value = solicitudActiva.comentario || '';
+        commentModal.classList.remove('hidden');
+    }
+    function cerrarModalComentario() { commentModal.classList.add('hidden'); }
+    async function guardarComentarioModal() {
+        const nuevoComentario = document.getElementById('modalTextarea').value.trim();
+        const docRef = doc(db, "solicitudes", solicitudActiva.id);
+        try {
+            await updateDoc(docRef, { comentario: nuevoComentario });
+            solicitudActiva.comentario = nuevoComentario;
+            const idx = allSolicitudes.findIndex(s => s.id === solicitudActiva.id);
+            if (idx > -1) allSolicitudes[idx].comentario = nuevoComentario;
+            document.getElementById('commentIcon').classList.toggle('has-comment', !!nuevoComentario);
+            cerrarModalComentario();
+        } catch (error) { console.error("Error al guardar:", error); alert("No se pudo guardar el comentario."); }
+    }
+    const formatearCapital = (c, sinPrefijo = false) => {
+      const numero = Math.round(parseFloat(String(c).replace(/[^\d,.-]/g, '').replace(',', '.')));
+      return sinPrefijo ? numero.toLocaleString("es-AR") : `USD ${numero.toLocaleString("es-AR")}`;
+    };
+    const formatearFecha = f => f ? f.split("-").reverse().join("/") : "-";
+
+    document.getElementById("backBtn").addEventListener("click", volverABusqueda);
+    buscadorInput.addEventListener("keyup", handleSearch);
+    resultadosBusqueda.addEventListener("click", handleMostrarDetalle);
+    document.getElementById('modalGuardarBtn').addEventListener('click', guardarComentarioModal);
+    document.getElementById('modalCancelarBtn').addEventListener('click', cerrarModalComentario);
+    mostrarMasBtn.addEventListener('click', mostrarMasSolicitudes);
+    
+    function init() { console.log("Iniciando..."); cargarDatosGlobales(); }
+    init();
+  </script>
+
+</body>
+</html>
