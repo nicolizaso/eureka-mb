@@ -1,4 +1,4 @@
-import { auth, db } from './firebase-config.js'; // Importamos la config que creamos arriba
+import { auth, db } from './firebase.js'; // Importamos la config que creamos arriba
 import { 
     signInWithEmailAndPassword, 
     createUserWithEmailAndPassword,

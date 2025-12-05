@@ -1,7 +1,6 @@
-// js/firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyByH3CP-mOFo7Sz07F0E1015GtzrhyDDFI",
@@ -13,10 +12,8 @@ const firebaseConfig = {
     measurementId: "G-VBGL25Z494"
 };
 
-// Inicializamos una sola vez para toda la app
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
 
-// Exportamos para usar en otros archivos
-export { db, auth };
+// Exportamos los servicios para usarlos en toda la app
+export const db = getFirestore(app);
+export const auth = getAuth(app);

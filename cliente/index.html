@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Cuenta | MB Eureka</title>
+    <link rel="stylesheet" href="style.css">
+    <style>body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }</style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-brand">Hola, <span id="nombreUsuario">Inversor</span></div>
+        <div class="nav-actions">
+            <a href="https://mbeureka.com/simulador" target="_blank" class="nav-link">Simulador</a>
+            <button id="btnEditarPerfil" class="nav-link">Mis Datos</button>
+            <button id="btnCerrarSesion" class="btn-logout">Cerrar Sesión</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        
+        <div id="seccionPerfil" class="card hidden">
+            <h3>Mis Datos Personales</h3>
+            <form id="formPerfil">
+                <div class="grid-form">
+                    <input type="text" id="perfilNombre" disabled>
+                    <input type="email" id="perfilMail" disabled>
+                    <input type="text" id="perfilTelefono" disabled>
+                    </div>
+                <div id="controlesEdicion" class="hidden" style="margin-top:15px;">
+                    <button type="submit" class="btn-primary">Guardar Cambios</button>
+                    <button type="button" id="btnCancelarEdicion" class="btn-secondary">Cancelar</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Mis Inversiones</h3>
+                <button id="btnAgregarCarpeta" class="btn-small">+ Vincular Carpeta</button>
+            </div>
+
+            <div id="formVincularCarpeta" class="hidden search-box">
+                <input type="text" id="inputNumeroCarpeta" placeholder="Número de carpeta">
+                <button id="btnBuscarCarpeta">Buscar</button>
+                <div id="resultadoBusqueda"></div>
+            </div>
+
+            <div id="mensajeSinInversiones" class="hidden empty-state">
+                No tienes inversiones registradas aún.
+            </div>
+
+            <div class="table-responsive desktop-only">
+                <table id="tablaInversiones">
+                    <thead>
+                        <tr>
+                            <th>Capital</th>
+                            <th>Plazo</th>
+                            <th>Tasa</th>
+                            <th>Unidad</th>
+                            <th>Fecha</th>
+                            <th>Carpeta</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="mobile-only" id="listaInversionesMobile">
+                </div>
+        </div>
+
+        <div id="seccionCalendario" class="card hidden">
+            <h3>Calendario de Pagos</h3>
+            <div class="calendario-wrapper">
+                <table id="tablaCalendario">
+                    <thead>
+                        <tr id="headerCalendario">
+                            <th>Carpeta</th>
+                            </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="popupOverlay" class="overlay hidden">
+        <div class="popup">
+            <h4 id="popupTitulo">Detalle</h4>
+            <div id="popupContenido"></div>
+            <button id="btnCerrarPopup" class="btn-primary" style="margin-top:15px; width:100%">Cerrar</button>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
