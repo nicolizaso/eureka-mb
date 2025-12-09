@@ -13,6 +13,7 @@ import {
     where,
     getDocs 
 } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
+import { mostrarNotificacion } from './utils.js';
 
 // --- ELEMENTOS DEL DOM ---
 const contenedor = document.getElementById('contenedorLogin');
@@ -34,18 +35,18 @@ onAuthStateChanged(auth, async (user) => {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const userData = docSnap.data();
-                mostrarMensaje(`Hola ${userData.nombre.split(' ')[0]}, ingresando...`, "success");
+                mostrarNotificacion(`Hola ${userData.nombre.split(' ')[0]}, ingresando...`, "success");
                 redirigirSegunRol(userData.rol);
             } else {
                 console.warn("Usuario Auth existe, pero no tiene perfil en Firestore.");
                 // Esto pasa solo si el registro falló a medias. 
                 // Dejamos que el usuario vea el login para intentar de nuevo o contactar soporte.
                 contenedor.classList.remove('hidden');
-                mostrarMensaje("Error de perfil. Contacte soporte.", "error");
+                mostrarNotificacion("Error de perfil. Contacte soporte.", "error");
             }
         } catch (error) {
             console.error("Error crítico leyendo perfil:", error);
-            mostrarMensaje("Error de conexión.", "error");
+            mostrarNotificacion("Error de conexión.", "error");
         }
     } else {
         // Nadie logueado, mostrar opciones
@@ -98,7 +99,7 @@ loginForm.addEventListener('submit', async (e) => {
         let msg = "Error al ingresar.";
         if (error.code === 'auth/invalid-credential') msg = "Credenciales incorrectas.";
         if (error.message.includes("DNI")) msg = error.message;
-        mostrarMensaje(msg, "error");
+        mostrarNotificacion(msg, "error");
     }
 });
 
@@ -113,12 +114,12 @@ registerForm.addEventListener('submit', async (e) => {
     const password = document.getElementById('passwordRegister').value;
 
     if (!nombre || !dni || !mail || !password) {
-        mostrarMensaje("Completa todos los campos obligatorios.", "error");
+        mostrarNotificacion("Completa todos los campos obligatorios.", "error");
         return;
     }
 
     try {
-        mostrarMensaje("Verificando datos...", "neutral");
+        mostrarNotificacion("Verificando datos...", "neutral");
 
         // 1. Validar unicidad del DNI
         const dniExiste = await verificarDniExistente(dni);
@@ -128,7 +129,7 @@ registerForm.addEventListener('submit', async (e) => {
         const userCredential = await createUserWithEmailAndPassword(auth, mail, password);
         const user = userCredential.user;
 
-        mostrarMensaje("Creando perfil...", "neutral");
+        mostrarNotificacion("Creando perfil...", "neutral");
 
         // 3. Crear documento en Firestore usando el UID como llave maestra
         await setDoc(doc(db, "usuarios", user.uid), {
@@ -141,7 +142,7 @@ registerForm.addEventListener('submit', async (e) => {
             uid: user.uid // Redundancia útil
         });
 
-        mostrarMensaje("¡Cuenta creada con éxito!", "success");
+        mostrarNotificacion("¡Cuenta creada con éxito!", "success");
         
         // Redirección forzada por seguridad UX
         setTimeout(() => {
@@ -153,7 +154,7 @@ registerForm.addEventListener('submit', async (e) => {
         let msg = "No se pudo registrar.";
         if (error.code === 'auth/email-already-in-use') msg = "El email ya está en uso.";
         if (error.message.includes("DNI")) msg = error.message;
-        mostrarMensaje(msg, "error");
+        mostrarNotificacion(msg, "error");
     }
 });
 
@@ -180,14 +181,4 @@ async function verificarDniExistente(dni) {
     const q = query(collection(db, "usuarios"), where("dni", "==", dni));
     const querySnapshot = await getDocs(q);
     return !querySnapshot.empty;
-}
-
-function mostrarMensaje(texto, tipo) {
-    popup.innerText = texto;
-    popup.className = ""; 
-    popup.classList.add(tipo);
-    popup.classList.remove('hidden');
-    setTimeout(() => {
-        popup.classList.add('hidden');
-    }, 4000);
 }

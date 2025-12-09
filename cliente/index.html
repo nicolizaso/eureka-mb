@@ -29,12 +29,6 @@
                 <button id="btnAgregarCarpeta" class="btn-small">+ Vincular Carpeta</button>
             </div>
 
-            <div id="formVincularCarpeta" class="hidden search-box">
-                <input type="text" id="inputNumeroCarpeta" placeholder="Ingresa el N° de carpeta" autocomplete="off">
-                <button id="btnBuscarCarpeta" class="btn-primary">Buscar</button>
-                <div id="resultadoBusqueda" style="width: 100%; margin-top: 10px;"></div>
-            </div>
-
             <div id="mensajeSinInversiones" class="hidden empty-state">
                 <p>No tienes inversiones registradas o vinculadas aún.</p>
             </div>
@@ -126,6 +120,28 @@
     <div id="popupOverlay" class="overlay hidden">
        ...
     </div>
+
+    <div id="modalVincularOverlay" class="overlay hidden">
+        <div class="popup" style="max-width: 500px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
+                <div>
+                    <h3 style="margin:0;">Vincular Inversión</h3>
+                    <p style="font-size:0.85rem; color:#666; margin-top:5px; line-height:1.4;">
+                        Ingrese el número de carpeta para visualizar y gestionar inversiones externas (familiares o asociados) directamente desde su panel unificado.
+                    </p>
+                </div>
+                <span id="btnCerrarVincularX" style="cursor:pointer; font-size:1.5rem; font-weight:bold; margin-left:10px;">&times;</span>
+            </div>
+            
+            <div class="search-box-modal" style="display:flex; gap:10px; margin-bottom:20px;">
+                <input type="text" id="inputNumeroCarpeta" placeholder="Ingresa el N° de carpeta" autocomplete="off" style="flex:1;">
+                <button id="btnBuscarCarpeta" class="btn-primary">Buscar</button>
+            </div>
+
+            <div id="resultadoBusquedaModal"></div>
+        </div>
+    </div>
+    <div id="popupMensaje" class="hidden"></div>
 
     <script type="module" src="main.js"></script>
 </body>

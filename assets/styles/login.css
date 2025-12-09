@@ -100,31 +100,6 @@ p.atras {
     margin-top: 10px;
 }
 
-/* --- POPUP DE MENSAJES (FEEDBACK) --- */
-#popupMensaje {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #333;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 50px;
-  font-size: 14px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  z-index: 1000;
-  text-align: center;
-  min-width: 300px;
-}
-
-/* Error feedback styling */
-#popupMensaje.error {
-    background-color: #d32f2f;
-}
-
-#popupMensaje.success {
-    background-color: #2e7d32;
-}
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }

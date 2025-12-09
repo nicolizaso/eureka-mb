@@ -6,7 +6,8 @@
     --primary-hover: #1a1a1a;   /* Un tono más oscuro para hovers */
     
     --accent: #2E7D32;          /* Investment Green - Dinero y Éxito */
-    --accent-light: #e8f5e9;    /* Fondo verde muy suave para badges/alertas */
+    --accent-light: #e8f5e9;  
+    --danger: #d32f2f; /* Rojo profesional */ 
     
     --bg: #F4F6F8;              /* Fondo general gris-azulado suave */
     --white: #ffffff;           /* Tarjetas y superficies */
@@ -30,6 +31,11 @@ body {
     background-color: var(--bg);
     color: var(--text-main);
     font-family: var(--font-body); /* Inter para todo el cuerpo */
+}
+
+button, input, select, textarea {
+    font-family: var(--font-body); /* Fuerza Inter en botones e inputs */
+    font-feature-settings: "tnum"; /* Números alineados */
 }
 
 h1, h2, h3, h4, .nav-brand {
@@ -58,6 +64,7 @@ a { text-decoration: none; color: inherit; transition: 0.3s; }
     padding: 12px 24px;
     border-radius: var(--radius);
     font-weight: 600;
+    font-family: var(--font-body);
     font-size: 1rem;
     cursor: pointer;
     text-align: center;
@@ -174,4 +181,71 @@ footer {
     color: #ccc;
     padding: 60px 0 20px;
     font-size: 0.9rem;
+}
+
+/* --- NOTIFICACIONES Y FEEDBACK (TOASTS) --- */
+
+/* El contenedor base (inicialmente oculto) */
+#popupMensaje {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%); /* Centrado perfecto */
+    z-index: 9999; /* Siempre encima de todo */
+    
+    min-width: 320px;
+    max-width: 90%;
+    padding: 14px 24px;
+    
+    border-radius: 50px; /* Diseño tipo píldora (elegante) */
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--white);
+    
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2); /* Sombra difusa de calidad */
+    
+    /* Estado inicial para animación */
+    opacity: 0;
+    margin-top: -20px; 
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Efecto rebote suave */
+    pointer-events: none; /* Para que no bloquee clicks si es invisible */
+}
+
+/* Clase para MOSTRAR la notificación */
+#popupMensaje:not(.hidden) {
+    opacity: 1;
+    margin-top: 0;
+    pointer-events: auto;
+}
+
+/* --- VARIANTES DE COLOR --- */
+
+/* Éxito (Verde Inversión) */
+#popupMensaje.success {
+    background-color: var(--accent); 
+    border: 1px solid #28632b; /* Borde sutil para definición */
+}
+/* Icono visual por CSS (Opcional, agrega un check) */
+#popupMensaje.success::before {
+    content: "✓ ";
+    font-weight: 800;
+    margin-right: 8px;
+}
+
+/* Error (Rojo Alerta) */
+#popupMensaje.error {
+    background-color: var(--danger); /* Definido arriba o #d32f2f */
+    border: 1px solid #b71c1c;
+}
+#popupMensaje.error::before {
+    content: "✕ ";
+    font-weight: 800;
+    margin-right: 8px;
+}
+
+/* Neutral / Info (Gris Oscuro) */
+#popupMensaje.neutral {
+    background-color: var(--primary);
+    border: 1px solid #000;
 }

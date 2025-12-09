@@ -90,6 +90,68 @@ h3 { font-size: 1.25rem; font-weight: 700; margin: 0; }
     grid-template-columns: 1fr; /* Mobile First: 1 columna */
     gap: 15px; 
 }
+/* ESTILOS DE LA TARJETA DE VINCULACIÓN (Simil Foto) */
+.card-resultado-vinculo {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+.card-res-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.badge-carpeta {
+    background-color: #f3f4f6;
+    color: #4b5563;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.info-tasa {
+    text-align: right;
+}
+.text-tasa {
+    color: var(--accent); /* Tu verde definido */
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: block;
+}
+.text-plazo {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.monto-grande {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 20px;
+    font-family: var(--font-heading);
+}
+
+.card-res-footer {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 15px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.label-dato { font-weight: 500; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (min-width: 768px) {
     .grid-form { grid-template-columns: 1fr 1fr; }

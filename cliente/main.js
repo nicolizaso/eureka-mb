@@ -3,7 +3,7 @@ import { auth, db } from '../assets/js/firebase.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js";
 import { doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
 // Importamos los helpers. NO volver a declararlos abajo.
-import { formatearMoneda, formatearFecha, formatearPorcentaje } from '../assets/js/utils.js';
+import { formatearMoneda, formatearFecha, formatearPorcentaje, mostrarNotificacion } from '../assets/js/utils.js';
 
 let usuarioActual = null;
 
@@ -286,59 +286,113 @@ function generarCalendario(solicitudes) {
     });
 }
 
-// --- 5. EVENT LISTENERS ---
-// Usamos addEventListener seguro
-const btnAgregar = document.getElementById('btnAgregarCarpeta');
-if(btnAgregar) {
-    btnAgregar.addEventListener('click', () => {
-        document.getElementById('formVincularCarpeta').classList.toggle('hidden');
+// --- LÓGICA DE VINCULACIÓN DE CARPETAS (MODAL) ---
+
+const modalVincular = document.getElementById('modalVincularOverlay');
+const btnAbrirVincular = document.getElementById('btnAgregarCarpeta');
+const btnCerrarVincularX = document.getElementById('btnCerrarVincularX');
+
+// 1. Abrir Modal
+if(btnAbrirVincular) {
+    btnAbrirVincular.addEventListener('click', () => {
+        modalVincular.classList.remove('hidden');
+        document.getElementById('inputNumeroCarpeta').focus();
     });
 }
 
+// 2. Cerrar Modal (X y Click fuera)
+if(btnCerrarVincularX) {
+    btnCerrarVincularX.addEventListener('click', () => modalVincular.classList.add('hidden'));
+}
+if(modalVincular) {
+    modalVincular.addEventListener('click', (e) => {
+        if(e.target === modalVincular) modalVincular.classList.add('hidden');
+    });
+}
+
+// 3. Buscar Carpeta
 const btnBuscar = document.getElementById('btnBuscarCarpeta');
+
 if(btnBuscar) {
     btnBuscar.addEventListener('click', async () => {
         const input = document.getElementById('inputNumeroCarpeta');
-        const resultadoDiv = document.getElementById('resultadoBusqueda');
+        const resultadoDiv = document.getElementById('resultadoBusquedaModal');
         const numero = input.value.trim();
 
-        resultadoDiv.innerHTML = '<div class="spinner"></div>'; // Feedback de carga
+        resultadoDiv.innerHTML = '<div class="spinner" style="margin: 20px auto; display:block;"></div>'; 
 
         if (!numero) {
-            resultadoDiv.textContent = "Ingresa un número.";
+            resultadoDiv.innerHTML = '<p style="color:#d32f2f; text-align:center;">Por favor ingrese un número.</p>';
             return;
         }
 
-        const q = query(collection(db, "solicitudes"), where("carpeta", "==", numero));
-        const snap = await getDocs(q);
+        try {
+            const q = query(collection(db, "solicitudes"), where("carpeta", "==", numero));
+            const snap = await getDocs(q);
 
-        if (snap.empty) {
-            resultadoDiv.innerHTML = '<p style="color:#d32f2f">No encontrada.</p>';
-        } else {
-            const data = snap.docs[0].data();
-            resultadoDiv.innerHTML = `
-                <div style="padding:10px; background:#e8f5e9; border-radius:4px; border:1px solid #c8e6c9;">
-                    <p><strong>Encontrada:</strong> Capital ${formatearMoneda(data.capital)}</p>
-                    <button id="btnConfirmarVinculo" class="btn-primary" style="margin-top:10px; width:100%">Vincular ahora</button>
-                </div>
-            `;
-            
-            // Listener dinámico para el botón creado
-            document.getElementById('btnConfirmarVinculo').addEventListener('click', async () => {
-                try {
-                    await setDoc(doc(collection(db, `usuarios/${usuarioActual.uid}/carpetasVinculadas`)), {
-                        carpeta: numero,
-                        fechaVinculacion: new Date().toISOString()
-                    });
-                    alert("¡Vinculada con éxito!");
-                    input.value = "";
-                    resultadoDiv.innerHTML = "";
-                    document.getElementById('formVincularCarpeta').classList.add('hidden');
-                    cargarInversiones(); // Recargar datos
-                } catch (e) {
-                    alert("Error: " + e.message);
-                }
-            });
+            if (snap.empty) {
+                resultadoDiv.innerHTML = '<p style="color:#d32f2f; text-align:center; margin-top:15px;">No se encontró ninguna carpeta con ese número.</p>';
+            } else {
+                const data = snap.docs[0].data();
+                
+                // Formateo de datos para la tarjeta
+                const montoFmt = formatearMoneda(data.capital);
+                const fechaFmt = formatearFecha(data.fecha);
+                const unidad = data.unidad || 'General'; // Ejemplo: '3 - Dropshipping'
+                const tasa = data.ganancia ? `${data.ganancia}%` : '-';
+                
+                // Renderizamos la tarjeta estilo foto
+                resultadoDiv.innerHTML = `
+                    <div class="card-resultado-vinculo">
+                        <div class="card-res-header">
+                            <span class="badge-carpeta">#${numero} - ${data.nombre ? data.nombre.split(' ')[0] : 'INV'}</span>
+                            <div class="info-tasa">
+                                <span class="text-tasa">${tasa}</span>
+                                <span class="text-plazo">${data.periodos} meses</span>
+                            </div>
+                        </div>
+                        
+                        <div class="monto-grande">${montoFmt}</div>
+                        
+                        <div class="card-res-footer">
+                            <span class="label-dato">Fecha: ${fechaFmt}</span>
+                            <span class="label-dato">${unidad}</span>
+                        </div>
+                    </div>
+                    
+                    <button id="btnConfirmarVinculo" class="btn-primary" style="width:100%;">Vincular a mi perfil</button>
+                `;
+                
+                // Listener dinámico para el botón de vincular
+                document.getElementById('btnConfirmarVinculo').addEventListener('click', async () => {
+                    const btn = document.getElementById('btnConfirmarVinculo');
+                    btn.textContent = "Vinculando...";
+                    btn.disabled = true;
+
+                    try {
+                        await setDoc(doc(collection(db, `usuarios/${usuarioActual.uid}/carpetasVinculadas`)), {
+                            carpeta: numero,
+                            fechaVinculacion: new Date().toISOString()
+                        });
+                        
+                        // Feedback y Cierre
+                        mostrarNotificacion("¡Inversión vinculada con éxito!", "success");
+                        input.value = "";
+                        resultadoDiv.innerHTML = "";
+                        modalVincular.classList.add('hidden');
+                        
+                        // Recargar Dashboard
+                        cargarInversiones(); 
+                    } catch (e) {
+                        mostrarNotificacion("Error al vincular: " + e.message, "error");
+                        btn.textContent = "Vincular a mi perfil";
+                        btn.disabled = false;
+                    }
+                });
+            }
+        } catch (error) {
+            console.error(error);
+            resultadoDiv.innerHTML = '<p style="color:red; text-align:center;">Ocurrió un error al buscar.</p>';
         }
     });
 }
@@ -439,7 +493,7 @@ if(btnGuardar) {
         const nuevoTel = document.getElementById('perfilTelefono').value.trim();
 
         if(!nuevoTel) {
-            alert("El teléfono no puede estar vacío.");
+            mostrarNotificacion("El teléfono no puede estar vacío.", "error");
             return;
         }
 
@@ -456,12 +510,12 @@ if(btnGuardar) {
             // Actualizamos memoria local
             usuarioActual.telefono = nuevoTel;
 
-            alert("Teléfono actualizado correctamente.");
+            mostrarNotificacion("Teléfono actualizado correctamente.", "success");
             bloquearInputs();
 
         } catch (error) {
             console.error("Error al actualizar:", error);
-            alert("Error al guardar los cambios.");
+            mostrarNotificacion("Error al guardar los cambios.", "error");
         } finally {
             btnGuardar.textContent = "Guardar Cambios";
             btnGuardar.disabled = false;
