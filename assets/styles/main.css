@@ -1,24 +1,46 @@
 /* --- VARIABLES & RESET --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap');
+
 :root {
-    --primary: #342E2E;      /* El gris oscuro corporativo de Eureka */
-    --accent: #1877f2;       /* Azul confianza (Facebook blue/Chase blue) */
-    --accent-hover: #145dbf;
-    --text: #1c1e21;         /* Negro suave para lectura */
-    --text-light: #65676b;   /* Gris para subtítulos */
-    --bg-light: #01122c;     /* Fondos secundarios */
-    --white: #ffffff;
-    --shadow: 0 2px 4px rgba(0,0,0,0.1);
-    --radius: 8px;
-    --container: 1100px;
+    --primary: #342E2E;         /* Charcoal Jet - Elegancia y Estructura */
+    --primary-hover: #1a1a1a;   /* Un tono más oscuro para hovers */
+    
+    --accent: #2E7D32;          /* Investment Green - Dinero y Éxito */
+    --accent-light: #e8f5e9;    /* Fondo verde muy suave para badges/alertas */
+    
+    --bg: #F4F6F8;              /* Fondo general gris-azulado suave */
+    --white: #ffffff;           /* Tarjetas y superficies */
+    --border: #E0E0E0;          /* Líneas divisorias sutiles */
+    
+    --text-main: #342E2E;       /* Texto principal */
+    --text-muted: #666666;      /* Texto secundario */
+
+    /* TIPOGRAFÍA */
+    --font-heading: 'Montserrat', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    
+    /* SOMBRAS (Elevación) */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: var(--text);
-    background-color: var(--white);
-    line-height: 1.6;
+    background-color: var(--bg);
+    color: var(--text-main);
+    font-family: var(--font-body); /* Inter para todo el cuerpo */
+}
+
+h1, h2, h3, h4, .nav-brand {
+    font-family: var(--font-heading); /* Montserrat para títulos */
+    letter-spacing: -0.02em; /* Un toque moderno, letras un pelín más juntas */
+}
+
+/* AJUSTE PARA NÚMEROS EN TABLAS */
+td, .monto, .capital {
+    font-feature-settings: "tnum"; /* Activa números tabulares en Inter */
+    font-variant-numeric: tabular-nums;
 }
 
 /* --- UTILIDADES --- */
