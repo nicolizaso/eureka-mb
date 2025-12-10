@@ -3,86 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Administración | MB Eureka</title>
+    <title>Admin Console | MB Eureka</title>
+    
     <link rel="stylesheet" href="../assets/styles/main.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <nav class="navbar-admin">
-        <div class="brand">MB Eureka <span class="badge">ADMIN</span></div>
-        <button id="btnLogout" class="btn-logout">Salir</button>
+        <div class="brand">
+            MB Eureka <span class="badge-admin">ADMIN</span>
+        </div>
+        <div class="nav-right">
+            <span id="adminName" class="admin-user">Administrador</span>
+            <button id="btnLogout" class="btn-logout-admin">Salir</button>
+        </div>
     </nav>
 
     <div class="container-admin">
         
-        <div class="search-section">
-            <input type="text" id="buscadorInput" placeholder="🔍 Buscar por carpeta, DNI o nombre..." autocomplete="off">
-            <div id="loadingIndicator" class="hidden spinner"></div>
+        <div class="dashboard-header">
+            <h1>Panel de Control</h1>
+            <p class="text-muted">Gestión integral de cartera e inversiones.</p>
         </div>
 
-        <div id="vistaResultados" class="grid-resultados">
-            </div>
-
-        <div id="vistaDetalle" class="detalle-wrapper hidden">
-            <button id="btnVolver" class="btn-back">← Volver a resultados</button>
+        <div class="admin-grid">
             
-            <div class="card detalle-header">
-                <div class="header-top">
-                    <h2 id="detalleNombre">Nombre Cliente</h2>
-                    <div class="actions">
-                        <button id="btnEditar" class="btn-action">Editar</button>
-                        <button id="btnGuardar" class="btn-save hidden">Guardar</button>
-                        <button id="btnCancelar" class="btn-cancel hidden">Cancelar</button>
-                    </div>
+            <div class="card admin-card action-card">
+                <div class="card-icon">🔍</div>
+                <h3>Gestión de Cartera</h3>
+                <p>Buscar clientes, editar estados, ver detalles y cargar novedades.</p>
+                
+                <div class="search-wrapper">
+                    <input type="text" id="inputBuscador" placeholder="Buscar por DNI, Nombre o Carpeta..." autocomplete="off">
+                    <button id="btnBuscar" class="btn-admin-primary">Buscar</button>
                 </div>
+                
+                <div id="listaResultados" class="results-list hidden"></div>
+            </div>
 
-                <div class="datos-grid">
-                    <div class="dato-item">
-                        <label>Carpeta</label>
-                        <span class="val-display" id="dispCarpeta">000</span>
+            <div class="card admin-card">
+                <div class="card-icon">✨</div>
+                <h3>Nueva Inversión</h3>
+                <p>Dar de alta una nueva carpeta para un cliente existente o nuevo.</p>
+                <button id="btnNuevaInversion" class="btn-admin-outline full-width">Crear Carpeta</button>
+            </div>
+
+            <div class="card admin-card">
+                <div class="card-icon">💰</div>
+                <h3>Tesorería (Este Mes)</h3>
+                <p>Vencimientos y pagos pendientes de liquidación.</p>
+                <div class="treasury-preview">
+                    <div class="t-row">
+                        <span>A Pagar:</span>
+                        <span class="t-amount" id="kpiPagosMes">-</span>
                     </div>
-                    <div class="dato-item">
-                        <label>Capital (USD)</label>
-                        <span class="val-display" id="dispCapital">-</span>
-                        <input type="number" id="inputCapital" class="val-input hidden">
-                    </div>
-                    <div class="dato-item">
-                        <label>Ganancia (%)</label>
-                        <span class="val-display" id="dispGanancia">-</span>
-                        <input type="number" step="0.1" id="inputGanancia" class="val-input hidden">
-                    </div>
-                    <div class="dato-item">
-                        <label>Períodos (Meses)</label>
-                        <span class="val-display" id="dispPeriodos">-</span>
-                        <input type="number" id="inputPeriodos" class="val-input hidden">
-                    </div>
-                    <div class="dato-item full-width">
-                        <label>Notas / Comentarios</label>
-                        <textarea id="inputComentario" class="nota-input" placeholder="Agregar notas internas..."></textarea>
-                        <button id="btnGuardarNota" class="btn-small">Actualizar Nota</button>
-                    </div>
+                    <button id="btnVerTesoreria" class="btn-text">Ver detalle →</button>
                 </div>
             </div>
 
-            <div class="card">
-                <h3>Calendario de Pagos</h3>
-                <div class="table-responsive">
-                    <table id="tablaPagos">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Concepto</th>
-                                <th>Monto</th>
-                                <th>Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
         </div>
 
+        <div id="editorArea" class="editor-section hidden">
+            </div>
+
+    </div>
+
+    <div id="adminModal" class="overlay hidden">
+        <div class="popup">
+            <div class="modal-header-row">
+                <h3 id="modalTitle">Título</h3>
+                <span id="closeModal" class="close-x">&times;</span>
+            </div>
+            <div id="modalBody"></div>
+        </div>
     </div>
 
     <script type="module" src="main.js"></script>
