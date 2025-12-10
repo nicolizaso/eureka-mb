@@ -160,7 +160,7 @@ input:disabled { background: #f9f9f9; color: #777; border-color: #eee; }
     flex-shrink: 0;
     margin-top: auto;
     background-color: var(--primary ); /* Fondo limpio */
-    color: #e0e0e0); /* Texto oscuro */
+    color: #e0e0e0; /* Texto oscuro */
     border: 1px solid #e0e0e0; /* Borde sutil */
     padding: 14px;
     font-weight: 600;
