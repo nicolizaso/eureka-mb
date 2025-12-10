@@ -42,7 +42,6 @@ function cargarDatosPerfil() {
 // --- 3. CARGA DE INVERSIONES ---
 async function cargarInversiones() {
     const solicitudesTotales = [];
-    const seccionCalendario = document.getElementById('seccionCalendario');
     const mensajeVacio = document.getElementById('mensajeSinInversiones');
     const gridContainer = document.getElementById('gridInversiones');
     if(gridContainer) gridContainer.innerHTML = "";
@@ -89,13 +88,11 @@ async function cargarInversiones() {
 
         if (solicitudesTotales.length === 0) {
             if(mensajeVacio) mensajeVacio.classList.remove('hidden');
-            if(seccionCalendario) seccionCalendario.classList.add('hidden');
         } else {
             if(mensajeVacio) mensajeVacio.classList.add('hidden');
             solicitudesTotales.forEach(renderFilaInversion);
-            generarCalendario(solicitudesTotales);
-            if(seccionCalendario) seccionCalendario.classList.remove('hidden');
             calcularKpis(solicitudesTotales);
+            cargarNotificaciones(solicitudesTotales);
         }
     } catch (error) { console.error("Error cargando:", error); }
 }
@@ -192,6 +189,45 @@ function renderKpiCards(esteMes, mesPasado, capital, recuperado, restante, tasaP
         setText('dashProximoMonto', "Finalizado"); setText('dashProximoFecha', "-");
         const bdg = document.getElementById('dashProximaCarpeta'); if(bdg) bdg.classList.add('hidden');
     }
+}
+
+function cargarNotificaciones(solicitudes) {
+    const contenedor = document.getElementById('listaNotificaciones');
+    if(!contenedor) return;
+
+    // 1. Filtrar carpetas propias que tengan comentario
+    const propias = solicitudes.filter(s => 
+        s.dni === usuarioActual.dni && 
+        s.comentario && 
+        s.comentario.trim().length > 0
+    );
+
+    // 2. Si no hay, mostramos estado vacío (ya está en el HTML por defecto)
+    if (propias.length === 0) {
+        contenedor.innerHTML = `
+            <div class="notif-empty">
+                <span style="font-size: 1.5rem; opacity: 0.3;">📭</span>
+                <p>No tienes notificaciones nuevas.</p>
+            </div>`;
+        return;
+    }
+
+    // 3. Renderizar Lista
+    contenedor.innerHTML = ''; // Limpiar vacío
+    
+    propias.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'notif-item';
+        div.innerHTML = `
+            <div class="notif-header">
+                <span>Carpeta #${s.carpeta}</span>
+                <span>Aviso</span>
+            </div>
+            <div class="notif-body">"${s.comentario}"</div>
+            <span class="notif-source">- Administración</span>
+        `;
+        contenedor.appendChild(div);
+    });
 }
 
 // --- 5. RENDERIZADO TARJETAS ---
@@ -326,37 +362,6 @@ function abrirModalDetalle(solicitud) {
         const tarjetaActual = popupEl.querySelector('.quota-card.current');
         if(tarjetaActual) tarjetaActual.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 150);
-}
-
-function generarCalendario(solicitudes) {
-    const headerRow = document.getElementById("headerCalendario");
-    const tbody = document.querySelector("#tablaCalendario tbody");
-    if(!headerRow || !tbody) return;
-    tbody.innerHTML = "";
-    
-    let fechasSet = new Set();
-    const dataMap = solicitudes.map(s => {
-        const pagos = calcularPagosSimples(s);
-        pagos.forEach(p => fechasSet.add(p.key));
-        return { carpeta: s.carpeta, pagos };
-    });
-    
-    const meses = Array.from(fechasSet).sort();
-    while (headerRow.children.length > 1) headerRow.removeChild(headerRow.lastChild);
-    meses.forEach(k => { const th = document.createElement("th"); th.textContent = `${k.split('-')[1]}/${k.split('-')[0].slice(2)}`; headerRow.appendChild(th); });
-
-    const hoyKey = new Date().toISOString().slice(0, 7);
-    dataMap.forEach(({ carpeta, pagos }) => {
-        const row = document.createElement("tr");
-        const tdCarp = document.createElement("td"); tdCarp.textContent = carpeta; tdCarp.style.fontWeight="bold"; row.appendChild(tdCarp);
-        const pMap = {}; pagos.forEach(p => pMap[p.key] = p.monto);
-        meses.forEach(k => {
-            const td = document.createElement("td");
-            if(pMap[k]) { td.textContent = formatearMoneda(pMap[k]); td.className = k < hoyKey ? "cuota-pasada" : (k === hoyKey ? "cuota-actual" : "cuota-futura"); } else { td.textContent = "-"; td.style.color="#eee"; }
-            row.appendChild(td);
-        });
-        tbody.appendChild(row);
-    });
 }
 
 function calcularPagosSimples(solicitud) {

@@ -195,11 +195,74 @@ input:disabled { background: #f9f9f9; color: #777; border-color: #eee; }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-/* CALENDARIO */
-.calendario-wrapper { overflow-x: auto; margin-top: 15px; }
-#tablaCalendario { min-width: 100%; }
-#tablaCalendario th, #tablaCalendario td { text-align: center; min-width: 90px; border: 1px solid #eee; }
-#tablaCalendario td:first-child { text-align: left; font-weight: bold; position: sticky; left: 0; background: white; border-right: 2px solid #eee; z-index: 10; }
-.cuota-pasada { color: var(--accent); opacity: 0.6; }
-.cuota-actual { font-weight: bold; background: #e8f5e9; color: var(--accent); }
-.cuota-futura { color: #888; }
+/* --- TARJETA DE NOTIFICACIONES --- */
+
+.notifications-card {
+    flex: 1; /* Ocupa el espacio restante en la columna */
+    min-height: 250px; /* Altura base digna */
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.notif-feed {
+    flex: 1;
+    overflow-y: auto; /* Scroll interno si hay muchos mensajes */
+    padding-right: 5px;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Item Individual de Notificación */
+.notif-item {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px 15px;
+    border-left: 4px solid var(--primary); /* Acento visual */
+    font-size: 0.9rem;
+    position: relative;
+    transition: background 0.2s;
+}
+
+.notif-item:hover {
+    background-color: #f0f2f5;
+}
+
+.notif-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: 600;
+}
+
+.notif-body {
+    color: #333;
+    line-height: 1.4;
+    font-style: italic;
+}
+
+.notif-source {
+    display: block;
+    text-align: right;
+    font-size: 0.7rem;
+    color: var(--accent);
+    margin-top: 6px;
+    font-weight: 700;
+}
+
+/* Estado Vacío */
+.notif-empty {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 0.9rem;
+    text-align: center;
+    opacity: 0.8;
+}
