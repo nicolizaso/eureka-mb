@@ -1,538 +1,428 @@
-// IMPORTANTE: Asegúrate que la ruta a utils.js y firebase.js sea correcta
 import { auth, db } from '../assets/js/firebase.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js";
 import { doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
-// Importamos los helpers. NO volver a declararlos abajo.
 import { formatearMoneda, formatearFecha, formatearPorcentaje, mostrarNotificacion } from '../assets/js/utils.js';
 
 let usuarioActual = null;
 
+// --- HELPER SEGURIDAD ---
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
+
 // --- 1. AUTH GUARD ---
 onAuthStateChanged(auth, async (user) => {
     try {
-        if (!user) {
-            window.location.href = '../login.html';
-            return;
-        }
-
+        if (!user) { window.location.href = '../login.html'; return; }
         const docRef = doc(db, "usuarios", user.uid);
         const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-            // Permitimos acceso a clientes y admins (para que el admin pueda testear vista de usuario si quisiera, o filtramos estricto)
-            // Aquí lo dejamos estricto para cliente:
-             if (docSnap.data().rol === 'cliente' || docSnap.data().rol === 'admin') { 
-                // Nota: dejo pasar al admin también para que no tengas que crear cuenta nueva para probar
-                usuarioActual = { uid: user.uid, ...docSnap.data() };
-                initDashboard();
-            } else {
-                window.location.href = '../login.html';
-            }
-        } else {
-            // Usuario en Auth pero no en DB (raro)
-            console.error("Usuario sin registro en base de datos");
-            signOut(auth);
-        }
-    } catch (e) {
-        // Captura errores silenciosos de extensiones
-        console.error("Error en auth state:", e);
-    }
+        if (docSnap.exists() && (docSnap.data().rol === 'cliente' || docSnap.data().rol === 'admin')) {
+            usuarioActual = { uid: user.uid, ...docSnap.data() };
+            initDashboard();
+        } else { window.location.href = '../login.html'; }
+    } catch (e) { console.error("Auth error:", e); }
 });
 
-// --- 2. FUNCIONES PRINCIPALES ---
+// --- 2. INIT ---
 async function initDashboard() {
     if(!usuarioActual) return;
-    
-    // UI Update seguro
-    const nombreEl = document.getElementById('nombreUsuario');
-    if(nombreEl) nombreEl.textContent = usuarioActual.nombre ? usuarioActual.nombre.split(' ')[0] : 'Inversor';
-
+    setText('nombreUsuario', usuarioActual.nombre ? usuarioActual.nombre.split(' ')[0] : 'Inversor');
     cargarDatosPerfil();
     await cargarInversiones();
 }
 
 function cargarDatosPerfil() {
     document.getElementById('perfilNombre')?.setAttribute('value', usuarioActual.nombre || '');
-    // Aseguramos que el DNI se muestre (si existe en DB)
     if(document.getElementById('perfilDni')) document.getElementById('perfilDni').value = usuarioActual.dni || '-'; 
     if(document.getElementById('perfilMail')) document.getElementById('perfilMail').value = usuarioActual.mail || '';
     if(document.getElementById('perfilTelefono')) document.getElementById('perfilTelefono').value = usuarioActual.telefono || '';
 }
 
-// --- 3. LÓGICA DE INVERSIONES ---
+// --- 3. CARGA DE INVERSIONES ---
 async function cargarInversiones() {
     const solicitudesTotales = [];
-    const tablaDesktop = document.querySelector('#tablaInversiones tbody');
-    const listaMobile = document.getElementById('listaInversionesMobile');
     const seccionCalendario = document.getElementById('seccionCalendario');
     const mensajeVacio = document.getElementById('mensajeSinInversiones');
-    
-    // Limpieza
-    if(tablaDesktop) tablaDesktop.innerHTML = "";
-    if(listaMobile) listaMobile.innerHTML = "";
+    const gridContainer = document.getElementById('gridInversiones');
+    if(gridContainer) gridContainer.innerHTML = "";
 
     try {
-        // A. Carpetas Vinculadas
+        const idsCarpetas = new Set();
         const vinculadasRef = collection(db, `usuarios/${usuarioActual.uid}/carpetasVinculadas`);
         const vinculadasSnap = await getDocs(vinculadasRef);
+        vinculadasSnap.forEach(docV => idsCarpetas.add(docV.data().carpeta));
         
-        // B. Carpetas por DNI (Legacy)
-        let dniSnap = { docs: [] };
+        let carpetasPropias = [];
         if (usuarioActual.dni) {
             const qDni = query(collection(db, "solicitudes"), where("dni", "==", usuarioActual.dni));
-            dniSnap = await getDocs(qDni);
+            const dniSnap = await getDocs(qDni);
+            dniSnap.forEach(d => {
+                const data = d.data();
+                carpetasPropias.push({...data, id: d.id});
+                idsCarpetas.add(data.carpeta);
+            });
         }
 
-        const idsCarpetas = new Set();
-        
-        // Recolectar IDs
-        vinculadasSnap.forEach(docV => {
-            // Guardamos el NÚMERO de carpeta para buscarlo luego, o si guardaste el ID del doc úsalo.
-            // Asumo que guardaste { carpeta: "123" }
-            idsCarpetas.add(docV.data().carpeta); 
-        });
-        
-        // Las del DNI ya tienen el ID del documento, pero necesitamos buscar por campo 'carpeta' para unificar lógica
-        // O mejor, procesamos los docs del DNI directamente
-        const carpetasPorDni = dniSnap.docs.map(d => d.data());
-
-        // Ahora buscamos los detalles de las carpetas vinculadas (que solo tenemos el número)
-        for (const numCarpeta of idsCarpetas) {
-            const q = query(collection(db, "solicitudes"), where("carpeta", "==", numCarpeta));
-            const match = await getDocs(q);
-            match.forEach(m => carpetasPorDni.push({ ...m.data(), id: m.id }));
-        }
-
-        // Eliminar duplicados (si vinculó una carpeta que ya era suya por DNI)
         const unicosMap = new Map();
-        carpetasPorDni.forEach(item => unicosMap.set(item.carpeta, item));
+        carpetasPropias.forEach(c => unicosMap.set(c.carpeta, c));
+        for (const numCarpeta of idsCarpetas) {
+            if (!unicosMap.has(numCarpeta)) {
+                const q = query(collection(db, "solicitudes"), where("carpeta", "==", numCarpeta));
+                const match = await getDocs(q);
+                match.forEach(m => unicosMap.set(numCarpeta, { ...m.data(), id: m.id }));
+            }
+        }
         const listaUnica = Array.from(unicosMap.values());
 
-        // C. Obtener reingresos y armar objeto final
         for (const data of listaUnica) {
-            // Necesitamos el ID del documento para buscar la subcolección
-            // Si vino por DNI ya lo tenemos. Si vino por vínculo, necesitamos buscar el doc ID de nuevo si no lo guardamos.
-            // Para simplificar, buscamos el doc ID basado en el numero de carpeta
             const qId = query(collection(db, "solicitudes"), where("carpeta", "==", data.carpeta));
             const qIdSnap = await getDocs(qId);
-            
             if (!qIdSnap.empty) {
                 const docRef = qIdSnap.docs[0].ref;
                 const reingresosSnap = await getDocs(collection(docRef, "reingresos"));
-                const reingresos = reingresosSnap.docs.map(r => r.data());
-                
-                solicitudesTotales.push({ ...data, reingresos });
+                solicitudesTotales.push({ ...data, reingresos: reingresosSnap.docs.map(r => r.data()) });
             }
         }
 
-        // Ordenar
         solicitudesTotales.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
         if (solicitudesTotales.length === 0) {
-            mensajeVacio.classList.remove('hidden');
-            seccionCalendario.classList.add('hidden');
-            return; // Salimos si no hay datos
+            if(mensajeVacio) mensajeVacio.classList.remove('hidden');
+            if(seccionCalendario) seccionCalendario.classList.add('hidden');
         } else {
-            mensajeVacio.classList.add('hidden');
+            if(mensajeVacio) mensajeVacio.classList.add('hidden');
+            solicitudesTotales.forEach(renderFilaInversion);
+            generarCalendario(solicitudesTotales);
+            if(seccionCalendario) seccionCalendario.classList.remove('hidden');
+            calcularKpis(solicitudesTotales);
         }
+    } catch (error) { console.error("Error cargando:", error); }
+}
 
-        // Renderizar
-        solicitudesTotales.forEach(s => {
-            // DESKTOP ROW
-            if(tablaDesktop) {
-                const row = tablaDesktop.insertRow();
-                row.innerHTML = `
-                    <td>${formatearMoneda(s.capital)}</td>
-                    <td>${s.periodos} meses</td>
-                    <td>${formatearPorcentaje(s.ganancia)}</td>
-                    <td>${s.unidad || '-'}</td>
-                    <td>${formatearFecha(s.fecha)}</td>
-                    <td><strong>${s.carpeta}</strong></td>
-                `;
-                // Reingresos Desktop
-                if (s.reingresos?.length) {
-                    s.reingresos.forEach(r => {
-                        const subRow = tablaDesktop.insertRow();
-                        subRow.className = "reingreso-row";
-                        subRow.innerHTML = `
-                            <td>+ ${formatearMoneda(r.capital)}</td>
-                            <td colspan="2">Reingreso (Tasa: ${formatearPorcentaje(r.tasa)})</td>
-                            <td>-</td>
-                            <td>${formatearFecha(r.fecha)}</td>
-                            <td>↳</td>
-                        `;
-                    });
-                }
-            }
+// --- 4. KPIs ---
+function calcularKpis(solicitudes) {
+    const propias = solicitudes.filter(s => s.dni === usuarioActual.dni);
+    if (propias.length === 0) { setText('kpiTotalInvertido', "-"); return; }
 
-            // MOBILE CARD
-            if(listaMobile) {
-                const cardMobile = document.createElement('div');
-                cardMobile.className = 'card';
-                cardMobile.style.marginBottom = '15px';
-                cardMobile.style.padding = '15px';
-                cardMobile.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
-                        <div>
-                            <span style="background:#eee; padding:4px 8px; border-radius:4px; font-size:0.8rem; font-weight:bold;">#${s.carpeta}</span>
-                            <div style="font-weight:bold; font-size:1.1rem; margin-top:5px;">${formatearMoneda(s.capital)}</div>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:0.9rem; color:#2e7d32; font-weight:bold;">${s.ganancia}%</div>
-                            <div style="font-size:0.8rem; color:#666;">${s.periodos} meses</div>
-                        </div>
-                    </div>
-                    <div style="border-top:1px solid #eee; padding-top:10px; font-size:0.9rem; color:#666; display:flex; justify-content:space-between;">
-                        <span>Fecha: ${formatearFecha(s.fecha)}</span>
-                        <span>${s.unidad || ''}</span>
-                    </div>
-                `;
-                listaMobile.appendChild(cardMobile);
+    const hoy = new Date();
+    const mesActualKey = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+    const mesPasadoDate = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+    const mesPasadoKey = `${mesPasadoDate.getFullYear()}-${String(mesPasadoDate.getMonth() + 1).padStart(2, '0')}`;
+
+    let totalEsteMes=0, totalMesPasado=0, totalInvertido=0, totalGenerado=0, totalRestante=0, sumaTasas=0;
+    let mapaPagosFuturos={}; let todosLosPagosFuturosPlana=[]; let carpetasEsteMes=new Set();
+
+    propias.forEach(s => {
+        const capitalNum = parseFloat(String(s.capital).replace(/[^\d,.-]/g, '').replace(',', '.'));
+        const tasaNum = parseFloat(String(s.ganancia).replace(',', '.'));
+        totalInvertido += capitalNum; sumaTasas += tasaNum;
+
+        const pagos = calcularPagosSimples(s);
+        pagos.forEach(p => {
+            if (p.key === mesActualKey) { totalEsteMes += p.monto; carpetasEsteMes.add(s.carpeta); }
+            if (p.key === mesPasadoKey) totalMesPasado += p.monto;
+            if (p.key <= mesActualKey) totalGenerado += p.monto;
+            if (p.key > mesActualKey) { totalRestante += p.monto; todosLosPagosFuturosPlana.push({ ...p, carpeta: s.carpeta }); }
+            if (p.key >= mesActualKey) {
+                if (!mapaPagosFuturos[p.key]) mapaPagosFuturos[p.key] = { monto: 0, carpetas: new Set() };
+                mapaPagosFuturos[p.key].monto += p.monto;
+                mapaPagosFuturos[p.key].carpetas.add(s.carpeta);
             }
         });
+    });
 
-        // Generar Calendario
-        generarCalendario(solicitudesTotales);
-        seccionCalendario.classList.remove('hidden');
+    const promedioTasa = propias.length > 0 ? (sumaTasas / propias.length) : 0;
+    todosLosPagosFuturosPlana.sort((a, b) => a.key.localeCompare(b.key));
+    let acumuladoSimulado = totalGenerado;
+    let cuotasFaltantesParaBreakEven = 0;
+    let breakEvenLogrado = acumuladoSimulado >= totalInvertido;
 
-    } catch (error) {
-        console.error("Error cargando inversiones:", error);
+    if (!breakEvenLogrado) {
+        for (let pago of todosLosPagosFuturosPlana) {
+            acumuladoSimulado += pago.monto; cuotasFaltantesParaBreakEven++;
+            if (acumuladoSimulado >= totalInvertido) { breakEvenLogrado = true; break; }
+        }
+    }
+    renderKpiCards(totalEsteMes, totalMesPasado, totalInvertido, totalGenerado, totalRestante, promedioTasa, mapaPagosFuturos, carpetasEsteMes, hoy, cuotasFaltantesParaBreakEven, breakEvenLogrado);
+}
+
+function renderKpiCards(esteMes, mesPasado, capital, recuperado, restante, tasaPromedio, mapaFuturos, carpetasActivas, hoy, cuotasFaltan, breakEven) {
+    const mesNombre = hoy.toLocaleString('es-ES', { month: 'long' });
+    setText('lblMesActual', mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1));
+    setText('dashTotalMes', formatearMoneda(esteMes));
+
+    const badgeComp = document.getElementById('badgeComparacion');
+    if(badgeComp) {
+        const diff = esteMes - mesPasado;
+        if (diff > 0) { badgeComp.className = 'badge-trend positive'; badgeComp.innerHTML = `↑ ${formatearMoneda(diff)}`; }
+        else if (diff < 0) { badgeComp.className = 'badge-trend negative'; badgeComp.innerHTML = `↓ ${formatearMoneda(Math.abs(diff))}`; }
+        else { badgeComp.className = 'badge-trend neutral'; badgeComp.textContent = '='; }
+    }
+
+    const divFuentes = document.getElementById('dashFuentesIngreso');
+    if(divFuentes) divFuentes.innerHTML = carpetasActivas.size > 0 ? `De <strong>${carpetasActivas.size} carpetas</strong> propias.` : "Sin ingresos este mes.";
+
+    setText('kpiTotalInvertido', formatearMoneda(capital));
+    setText('kpiRendimientoPromedio', tasaPromedio.toFixed(1) + '%');
+    setText('kpiGenerado', formatearMoneda(recuperado));
+    setText('kpiRestante', formatearMoneda(restante));
+
+    const pct = capital > 0 ? (recuperado / capital) * 100 : 0;
+    setText('lblPorcentajeRecupero', pct.toFixed(1) + '%');
+    const barFill = document.getElementById('barRecupero');
+    if(barFill) barFill.style.width = Math.min(pct, 100) + '%';
+    const lblMensaje = document.getElementById('lblMensajeRecupero');
+    if(lblMensaje && barFill) {
+        if (pct >= 100) { barFill.classList.add('profit-mode'); lblMensaje.textContent = "¡Inversión recuperada! Fase de ganancia pura 🚀"; lblMensaje.style.color = "#a628c2"; lblMensaje.style.fontWeight = "bold"; }
+        else { barFill.classList.remove('profit-mode'); lblMensaje.textContent = `En ${cuotasFaltan} cuotas vas a haber recuperado el 100% de tu inversión.`; lblMensaje.style.color = "#888"; }
+    }
+
+    const fechasOrdenadas = Object.keys(mapaFuturos).sort();
+    if (fechasOrdenadas.length > 0) {
+        const keyProx = fechasOrdenadas[0];
+        const datosProx = mapaFuturos[keyProx];
+        const [a, m] = keyProx.split('-');
+        const nMes = new Date(a, m - 1, 1).toLocaleString('es-ES', { month: 'long' });
+        setText('dashProximoMonto', formatearMoneda(datosProx.monto));
+        setText('dashProximoFecha', `${nMes.charAt(0).toUpperCase() + nMes.slice(1)} ${a}`);
+        const bdg = document.getElementById('dashProximaCarpeta');
+        if(bdg) { bdg.textContent = `Carpetas: ${Array.from(datosProx.carpetas).join('; ')}`; bdg.classList.remove('hidden'); }
+    } else {
+        setText('dashProximoMonto', "Finalizado"); setText('dashProximoFecha', "-");
+        const bdg = document.getElementById('dashProximaCarpeta'); if(bdg) bdg.classList.add('hidden');
     }
 }
 
-// --- 4. LÓGICA DE CALENDARIO ---
+// --- 5. RENDERIZADO TARJETAS ---
+function renderFilaInversion(s) {
+    const gridContainer = document.getElementById('gridInversiones');
+    if (!gridContainer) return;
+
+    let capitalTotal = parseFloat(String(s.capital).replace(/[^\d,.-]/g, '').replace(',', '.'));
+    if (s.reingresos && s.reingresos.length > 0) {
+        s.reingresos.forEach(r => { capitalTotal += parseFloat(String(r.capital).replace(/[^\d,.-]/g, '').replace(',', '.')); });
+    }
+
+    const [y, m, d] = s.fecha.split('-').map(Number);
+    const fechaInicio = new Date(y, m - 1, d);
+    const hoy = new Date();
+    let mesesTranscurridos = (hoy.getFullYear() - fechaInicio.getFullYear()) * 12 + (hoy.getMonth() - fechaInicio.getMonth());
+    if (hoy.getDate() >= d) mesesTranscurridos++; 
+    const totalCuotas = parseInt(s.periodos);
+    let cuotaActual = Math.max(0, Math.min(mesesTranscurridos, totalCuotas));
+
+    let estadoDB = s.estado ? s.estado : "Activa";
+    let claseHeader = "header-activa"; 
+    const estadoNorm = estadoDB.toLowerCase();
+    if (estadoNorm === "pendiente") claseHeader = "header-pendiente";
+    else if (estadoNorm === "bloqueada") claseHeader = "header-bloqueada";
+    else if (estadoNorm === "finalizada") claseHeader = "header-finalizada";
+
+    const tieneComentario = s.comentario && s.comentario.trim().length > 0;
+    const bellIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>`;
+    const bellBtnHtml = tieneComentario ? `<button class="btn-bell has-notification" title="Ver mensaje" onclick="toggleNotificacion('${s.id}')">${bellIcon}</button>` : '';
+    const notifBoxHtml = tieneComentario ? `<div id="notif-${s.id}" class="notification-box"><p class="notif-content">"${s.comentario}"</p><span class="notif-signature">- Administración</span></div>` : '';
+
+    const card = document.createElement('div');
+    card.className = 'invest-card';
+    card.innerHTML = `
+        <div class="inv-card-header ${claseHeader}">
+            <span class="inv-carpeta">#${s.carpeta}</span>
+            <div class="header-controls"><span class="inv-status-text">${estadoDB.toUpperCase()}</span>${bellBtnHtml}</div>
+        </div>
+        ${notifBoxHtml}
+        <div class="inv-card-body">
+            <div class="inv-main-stat"><span class="inv-label">Capital Invertido</span><span class="inv-amount">${formatearMoneda(capitalTotal)}</span></div>
+            <div class="inv-details-grid">
+                <div class="inv-detail-item"><h5>Plazo / Avance</h5><p>${s.periodos} meses <span style="color:var(--accent); font-size:0.85rem">(${cuotaActual}/${s.periodos})</span></p></div>
+                <div class="inv-detail-item"><h5>Tasa</h5><p>${formatearPorcentaje(s.ganancia)}</p></div>
+                <div class="inv-detail-item"><h5>Unidad</h5><p>${s.unidad || 'General'}</p></div>
+                <div class="inv-detail-item"><h5>Inicio</h5><p>${formatearFecha(s.fecha)}</p></div>
+            </div>
+            <button class="btn-details" data-id="${s.id}">Detalle de Cuotas</button>
+        </div>
+    `;
+    card.querySelector('.btn-details').addEventListener('click', () => abrirModalDetalle(s));
+    gridContainer.appendChild(card);
+}
+
+window.toggleNotificacion = (id) => { const box = document.getElementById(`notif-${id}`); if (box) box.classList.toggle('visible'); };
+
+// --- HELPER: MODAL DETALLE ---
+function abrirModalDetalle(solicitud) {
+    const popup = document.getElementById('popupOverlay');
+    const pagos = calcularPagosSimples(solicitud);
+    const totalCuotasReales = parseInt(solicitud.periodos);
+    
+    let htmlHeader = `
+        <div class="modal-header-row">
+            <div>
+                <span class="badge-carpeta" style="font-size:0.9rem; margin-bottom:5px; display:inline-block;">#${solicitud.carpeta}</span>
+                <h3 style="color:var(--primary); margin:0; font-size:1.3rem;">${solicitud.unidad || 'Inversión'}</h3>
+                <p style="color:#666; font-size:0.9rem; margin:5px 0 0 0;">Titular: <strong>${solicitud.nombre}</strong></p>
+            </div>
+            <span id="btnModalCloseX" class="close-x">&times;</span>
+        </div>
+    `;
+
+    let htmlLista = `<div class="modal-list-container">`;
+    const hoyKey = new Date().toISOString().slice(0, 7);
+    
+    pagos.forEach((p, index) => {
+        const [anio, mes] = p.key.split('-');
+        const fechaCorta = `${mes}/${anio.slice(2)}`; 
+        
+        let textoCentro;
+        if (p.esCapital) {
+            textoCentro = "Devolución de Capital";
+        } else {
+            textoCentro = `Cuota ${index + 1} / ${totalCuotasReales}`;
+        }
+
+        let claseCard = '';
+        if (p.key < hoyKey) {
+            claseCard = 'paid';
+        } else if (p.key === hoyKey) {
+            claseCard = 'current';
+            textoCentro = "Pago en Curso"; 
+        } else {
+            claseCard = 'pending';
+        }
+        
+        htmlLista += `
+            <div class="quota-card ${claseCard}">
+                <div class="quota-col left"><span class="q-date">${fechaCorta}</span></div>
+                <div class="quota-col center"><span class="q-date" style="font-weight:600; font-size:0.95rem;">${textoCentro}</span></div>
+                <div class="quota-col right"><span class="q-amount">${formatearMoneda(p.monto)}</span></div>
+            </div>
+        `;
+    });
+    
+    htmlLista += `</div>`;
+    let htmlFooter = `<button id="btnCerrarPopupInner" class="btn-primary" style="width:100%">Cerrar</button>`;
+
+    // Inyectamos HTML asegurando que la estructura Flex interna sea respetada
+    // IMPORTANTE: .popup-inner es quien tiene el padding
+    const popupEl = document.getElementById('popupOverlay');
+    popupEl.innerHTML = `
+        <div class="popup">
+            <div class="popup-inner">
+                ${htmlHeader}
+                ${htmlLista}
+                ${htmlFooter}
+            </div>
+        </div>
+    `;
+    
+    popupEl.classList.remove('hidden');
+    
+    // Listeners del nuevo DOM
+    const popupInternal = popupEl.querySelector('.popup');
+    popupInternal.querySelector('#btnModalCloseX').addEventListener('click', () => popupEl.classList.add('hidden'));
+    popupInternal.querySelector('#btnCerrarPopupInner').addEventListener('click', () => popupEl.classList.add('hidden'));
+
+    setTimeout(() => {
+        const tarjetaActual = popupEl.querySelector('.quota-card.current');
+        if(tarjetaActual) tarjetaActual.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+}
+
 function generarCalendario(solicitudes) {
     const headerRow = document.getElementById("headerCalendario");
     const tbody = document.querySelector("#tablaCalendario tbody");
-    
     if(!headerRow || !tbody) return;
-
     tbody.innerHTML = "";
     
-    // 1. Recolectar todas las fechas de pago posibles
-    let fechasPagosSet = new Set();
-    
-    const datosPorCarpeta = solicitudes.map(s => {
-        const pagos = [];
-        const { carpeta, capital, ganancia, periodos, fecha } = s;
-        if (!carpeta || !capital || !fecha) return null;
-
-        const capInicial = parseFloat(String(capital).replace(/[^\d,.-]/g, '').replace(',', '.'));
-        const tasa = parseFloat(String(ganancia).replace(',', '.')) / 100;
-        const [y, m, d] = fecha.split("-").map(Number);
-        const fechaInicio = new Date(y, m - 1, d); // Mes 0-indexado
-
-        for (let i = 0; i < parseInt(periodos); i++) {
-            const fechaPago = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth() + i + 1, 1);
-            const key = `${fechaPago.getFullYear()}-${String(fechaPago.getMonth() + 1).padStart(2, "0")}`; // YYYY-MM
-            fechasPagosSet.add(key);
-
-            // Calculo simple de cuota (ajustar si tienes lógica compleja de días)
-            const monto = capInicial * tasa; 
-            pagos.push({ key, monto });
-        }
-        return { carpeta, pagos };
-    }).filter(Boolean);
-
-    // 2. Ordenar columnas (Meses)
-    const mesesOrdenados = Array.from(fechasPagosSet).sort();
-
-    // 3. Renderizar Header
-    // Limpiamos header dejando solo la primera columna
-    while (headerRow.children.length > 1) {
-        headerRow.removeChild(headerRow.lastChild);
-    }
-    
-    mesesOrdenados.forEach(k => {
-        const th = document.createElement("th");
-        const [anio, mes] = k.split("-");
-        // Formato corto: 05/24
-        th.textContent = `${mes}/${anio.slice(2)}`;
-        headerRow.appendChild(th);
+    let fechasSet = new Set();
+    const dataMap = solicitudes.map(s => {
+        const pagos = calcularPagosSimples(s);
+        pagos.forEach(p => fechasSet.add(p.key));
+        return { carpeta: s.carpeta, pagos };
     });
+    
+    const meses = Array.from(fechasSet).sort();
+    while (headerRow.children.length > 1) headerRow.removeChild(headerRow.lastChild);
+    meses.forEach(k => { const th = document.createElement("th"); th.textContent = `${k.split('-')[1]}/${k.split('-')[0].slice(2)}`; headerRow.appendChild(th); });
 
-    // 4. Renderizar Filas
-    const hoyKey = new Date().toISOString().slice(0, 7); // YYYY-MM actual
-
-    datosPorCarpeta.forEach(({ carpeta, pagos }) => {
+    const hoyKey = new Date().toISOString().slice(0, 7);
+    dataMap.forEach(({ carpeta, pagos }) => {
         const row = document.createElement("tr");
-        
-        // Columna Carpeta (Sticky)
-        const celdaCarpeta = document.createElement("td");
-        celdaCarpeta.textContent = carpeta;
-        celdaCarpeta.style.fontWeight = "bold";
-        row.appendChild(celdaCarpeta);
-
-        // Mapa de pagos para acceso rápido
-        const pagosMap = {};
-        pagos.forEach(p => pagosMap[p.key] = p.monto);
-
-        mesesOrdenados.forEach(k => {
+        const tdCarp = document.createElement("td"); tdCarp.textContent = carpeta; tdCarp.style.fontWeight="bold"; row.appendChild(tdCarp);
+        const pMap = {}; pagos.forEach(p => pMap[p.key] = p.monto);
+        meses.forEach(k => {
             const td = document.createElement("td");
-            if (pagosMap[k]) {
-                td.textContent = formatearMoneda(pagosMap[k]);
-                
-                if (k < hoyKey) td.className = "cuota-pasada";
-                else if (k === hoyKey) td.className = "cuota-actual";
-                else td.className = "cuota-futura";
-            } else {
-                td.textContent = "-";
-                td.style.color = "#eee";
-            }
+            if(pMap[k]) { td.textContent = formatearMoneda(pMap[k]); td.className = k < hoyKey ? "cuota-pasada" : (k === hoyKey ? "cuota-actual" : "cuota-futura"); } else { td.textContent = "-"; td.style.color="#eee"; }
             row.appendChild(td);
         });
-
         tbody.appendChild(row);
     });
 }
 
-// --- LÓGICA DE VINCULACIÓN DE CARPETAS (MODAL) ---
+function calcularPagosSimples(solicitud) {
+    const pagos = [];
+    const { capital, ganancia, periodos, fecha } = solicitud;
+    const cap = parseFloat(String(capital).replace(/[^\d,.-]/g, '').replace(',', '.'));
+    const g = parseFloat(String(ganancia).replace(',', '.')) / 100;
+    const mensual = cap * g;
+    const [y, m, d] = fecha.split('-').map(Number);
+    const fIngreso = new Date(y, m - 1, d);
 
-const modalVincular = document.getElementById('modalVincularOverlay');
-const btnAbrirVincular = document.getElementById('btnAgregarCarpeta');
-const btnCerrarVincularX = document.getElementById('btnCerrarVincularX');
-
-// 1. Abrir Modal
-if(btnAbrirVincular) {
-    btnAbrirVincular.addEventListener('click', () => {
-        modalVincular.classList.remove('hidden');
-        document.getElementById('inputNumeroCarpeta').focus();
-    });
+    for (let i = 0; i < parseInt(periodos); i++) {
+        const fPago = new Date(fIngreso.getFullYear(), fIngreso.getMonth() + i + 1, 1);
+        const key = `${fPago.getFullYear()}-${String(fPago.getMonth() + 1).padStart(2, '0')}`;
+        pagos.push({ key, monto: mensual });
+    }
+    const fDevol = new Date(fIngreso.getFullYear(), fIngreso.getMonth() + parseInt(periodos) + 1, 1);
+    const keyDev = `${fDevol.getFullYear()}-${String(fDevol.getMonth() + 1).padStart(2, '0')}`;
+    pagos.push({ key: keyDev, monto: cap, esCapital: true });
+    return pagos;
 }
 
-// 2. Cerrar Modal (X y Click fuera)
-if(btnCerrarVincularX) {
-    btnCerrarVincularX.addEventListener('click', () => modalVincular.classList.add('hidden'));
-}
-if(modalVincular) {
-    modalVincular.addEventListener('click', (e) => {
-        if(e.target === modalVincular) modalVincular.classList.add('hidden');
-    });
-}
+// --- 6. EVENT LISTENERS ---
+const modalPerfil = document.getElementById('modalPerfilOverlay');
+document.getElementById('btnEditarPerfil')?.addEventListener('click', () => modalPerfil.classList.remove('hidden'));
+document.getElementById('btnCerrarPerfilX')?.addEventListener('click', () => modalPerfil.classList.add('hidden'));
+modalPerfil?.addEventListener('click', (e) => { if(e.target===modalPerfil) modalPerfil.classList.add('hidden'); });
 
-// 3. Buscar Carpeta
-const btnBuscar = document.getElementById('btnBuscarCarpeta');
+const btnEditTel = document.getElementById('btnHabilitarEdicion');
+const btnCancelTel = document.getElementById('btnCancelarEdicion');
+const btnSaveTel = document.getElementById('btnGuardarEdicion');
+if(btnEditTel) btnEditTel.addEventListener('click', () => { const el=document.getElementById('perfilTelefono'); el.disabled=false; el.focus(); el.style.background='#fff'; el.style.borderColor='#2E7D32'; btnEditTel.classList.add('hidden'); btnCancelTel.classList.remove('hidden'); btnSaveTel.classList.remove('hidden'); });
+if(btnCancelTel) btnCancelTel.addEventListener('click', () => { const el=document.getElementById('perfilTelefono'); el.value=usuarioActual.telefono||''; el.disabled=true; el.style.background=''; el.style.borderColor=''; btnEditTel.classList.remove('hidden'); btnCancelTel.classList.add('hidden'); btnSaveTel.classList.add('hidden'); });
+if(btnSaveTel) btnSaveTel.addEventListener('click', async () => {
+    const val = document.getElementById('perfilTelefono').value.trim();
+    if(!val) return mostrarNotificacion("Ingrese un teléfono", "error");
+    btnSaveTel.textContent = "...";
+    try { await updateDoc(doc(db, "usuarios", usuarioActual.uid), { telefono: val }); usuarioActual.telefono = val; mostrarNotificacion("Teléfono actualizado", "success"); btnCancelTel.click(); }
+    catch(e) { mostrarNotificacion("Error al guardar", "error"); } finally { btnSaveTel.textContent = "Guardar Cambios"; }
+});
 
-if(btnBuscar) {
-    btnBuscar.addEventListener('click', async () => {
-        const input = document.getElementById('inputNumeroCarpeta');
-        const resultadoDiv = document.getElementById('resultadoBusquedaModal');
-        const numero = input.value.trim();
-
-        resultadoDiv.innerHTML = '<div class="spinner" style="margin: 20px auto; display:block;"></div>'; 
-
-        if (!numero) {
-            resultadoDiv.innerHTML = '<p style="color:#d32f2f; text-align:center;">Por favor ingrese un número.</p>';
-            return;
-        }
-
-        try {
-            const q = query(collection(db, "solicitudes"), where("carpeta", "==", numero));
-            const snap = await getDocs(q);
-
-            if (snap.empty) {
-                resultadoDiv.innerHTML = '<p style="color:#d32f2f; text-align:center; margin-top:15px;">No se encontró ninguna carpeta con ese número.</p>';
-            } else {
-                const data = snap.docs[0].data();
-                
-                // Formateo de datos para la tarjeta
-                const montoFmt = formatearMoneda(data.capital);
-                const fechaFmt = formatearFecha(data.fecha);
-                const unidad = data.unidad || 'General'; // Ejemplo: '3 - Dropshipping'
-                const tasa = data.ganancia ? `${data.ganancia}%` : '-';
-                
-                // Renderizamos la tarjeta estilo foto
-                resultadoDiv.innerHTML = `
-                    <div class="card-resultado-vinculo">
-                        <div class="card-res-header">
-                            <span class="badge-carpeta">#${numero} - ${data.nombre ? data.nombre.split(' ')[0] : 'INV'}</span>
-                            <div class="info-tasa">
-                                <span class="text-tasa">${tasa}</span>
-                                <span class="text-plazo">${data.periodos} meses</span>
-                            </div>
-                        </div>
-                        
-                        <div class="monto-grande">${montoFmt}</div>
-                        
-                        <div class="card-res-footer">
-                            <span class="label-dato">Fecha: ${fechaFmt}</span>
-                            <span class="label-dato">${unidad}</span>
-                        </div>
-                    </div>
-                    
-                    <button id="btnConfirmarVinculo" class="btn-primary" style="width:100%;">Vincular a mi perfil</button>
-                `;
-                
-                // Listener dinámico para el botón de vincular
-                document.getElementById('btnConfirmarVinculo').addEventListener('click', async () => {
-                    const btn = document.getElementById('btnConfirmarVinculo');
-                    btn.textContent = "Vinculando...";
-                    btn.disabled = true;
-
-                    try {
-                        await setDoc(doc(collection(db, `usuarios/${usuarioActual.uid}/carpetasVinculadas`)), {
-                            carpeta: numero,
-                            fechaVinculacion: new Date().toISOString()
-                        });
-                        
-                        // Feedback y Cierre
-                        mostrarNotificacion("¡Inversión vinculada con éxito!", "success");
-                        input.value = "";
-                        resultadoDiv.innerHTML = "";
-                        modalVincular.classList.add('hidden');
-                        
-                        // Recargar Dashboard
-                        cargarInversiones(); 
-                    } catch (e) {
-                        mostrarNotificacion("Error al vincular: " + e.message, "error");
-                        btn.textContent = "Vincular a mi perfil";
-                        btn.disabled = false;
-                    }
-                });
-            }
-        } catch (error) {
-            console.error(error);
-            resultadoDiv.innerHTML = '<p style="color:red; text-align:center;">Ocurrió un error al buscar.</p>';
-        }
-    });
-}
-
-const btnCerrar = document.getElementById('btnCerrarSesion');
-if(btnCerrar) {
-    btnCerrar.addEventListener('click', () => {
-        signOut(auth).then(() => window.location.href = '../login.html');
-    });
-}
-
-// --- EVENT LISTENERS ACTUALIZADOS ---
-
-// 1. Botón "Mis Datos" (Abre el Modal)
-const btnEditar = document.getElementById('btnEditarPerfil');
-if(btnEditar) {
-    btnEditar.addEventListener('click', () => {
-        // Mostramos el overlay del perfil
-        document.getElementById('modalPerfilOverlay').classList.remove('hidden');
-    });
-}
-
-// 2. Botón "Cerrar" (Boton Gris dentro del modal)
-const btnCerrarPerfil = document.getElementById('btnCerrarPerfil');
-if(btnCerrarPerfil) {
-    btnCerrarPerfil.addEventListener('click', () => {
-        document.getElementById('modalPerfilOverlay').classList.add('hidden');
-    });
-}
-
-// 3. La "X" para cerrar (Opcional pero recomendado para UX)
-const btnCerrarX = document.getElementById('btnCerrarPerfilX');
-if(btnCerrarX) {
-    btnCerrarX.addEventListener('click', () => {
-        document.getElementById('modalPerfilOverlay').classList.add('hidden');
-    });
-}
-
-// 4. Cerrar al hacer clic fuera del modal (Overlay click)
-const overlayPerfil = document.getElementById('modalPerfilOverlay');
-if(overlayPerfil) {
-    overlayPerfil.addEventListener('click', (e) => {
-        if (e.target === overlayPerfil) {
-            overlayPerfil.classList.add('hidden');
-        }
-    });
-}
-
-const btnCerrarPopup = document.getElementById('btnCerrarPopup');
-if(btnCerrarPopup) {
-    btnCerrarPopup.addEventListener('click', () => {
-        document.getElementById('popupOverlay').classList.add('hidden');
-    });
-}
-
-// --- LÓGICA DE EDICIÓN DE PERFIL (Solo Teléfono) ---
-
-const btnHabilitar = document.getElementById('btnHabilitarEdicion');
-const btnCancelar = document.getElementById('btnCancelarEdicion');
-const btnGuardar = document.getElementById('btnGuardarEdicion');
-
-// IMPORTANTE: Solo listamos los inputs que permitimos tocar
-const inputsEditables = ['perfilTelefono']; 
-
-// 1. Botón "Editar": Desbloquea solo el teléfono
-if(btnHabilitar) {
-    btnHabilitar.addEventListener('click', () => {
-        inputsEditables.forEach(id => {
-            const el = document.getElementById(id);
-            if(el) {
-                el.disabled = false;
-                el.style.backgroundColor = '#fff'; 
-                el.style.borderColor = '#2e7d32'; // Verde para indicar foco
-                el.focus();
-            }
-        });
-        
-        btnHabilitar.classList.add('hidden');
-        btnCancelar.classList.remove('hidden');
-        btnGuardar.classList.remove('hidden');
-    });
-}
-
-// 2. Botón "Cancelar": Revertir cambios
-if(btnCancelar) {
-    btnCancelar.addEventListener('click', () => {
-        // Volvemos a poner el valor original que tenemos en memoria
-        if(document.getElementById('perfilTelefono')) {
-            document.getElementById('perfilTelefono').value = usuarioActual.telefono || '';
-        }
-        bloquearInputs();
-    });
-}
-
-// 3. Botón "Guardar": Escribir SOLO el teléfono en Firestore
-if(btnGuardar) {
-    btnGuardar.addEventListener('click', async () => {
-        const nuevoTel = document.getElementById('perfilTelefono').value.trim();
-
-        if(!nuevoTel) {
-            mostrarNotificacion("El teléfono no puede estar vacío.", "error");
-            return;
-        }
-
-        try {
-            btnGuardar.textContent = "Guardando...";
-            btnGuardar.disabled = true;
-
-            // Actualizamos Firestore - SOLO EL TELÉFONO
-            const docRef = doc(db, "usuarios", usuarioActual.uid);
-            await updateDoc(docRef, {
-                telefono: nuevoTel
+const modalVinculo = document.getElementById('modalVincularOverlay');
+document.getElementById('btnAgregarCarpeta')?.addEventListener('click', () => { modalVinculo.classList.remove('hidden'); document.getElementById('inputNumeroCarpeta').focus(); });
+document.getElementById('btnCerrarVincularX')?.addEventListener('click', () => modalVinculo.classList.add('hidden'));
+modalVinculo?.addEventListener('click', (e) => { if(e.target===modalVinculo) modalVinculo.classList.add('hidden'); });
+document.getElementById('btnBuscarCarpeta')?.addEventListener('click', async () => {
+    const input = document.getElementById('inputNumeroCarpeta');
+    const resDiv = document.getElementById('resultadoBusquedaModal');
+    const num = input.value.trim();
+    resDiv.innerHTML = '<div class="spinner" style="display:block; margin:20px auto;"></div>';
+    if(!num) { resDiv.innerHTML = '<p style="text-align:center; color:#d32f2f">Ingrese un número.</p>'; return; }
+    try {
+        const snap = await getDocs(query(collection(db, "solicitudes"), where("carpeta", "==", num)));
+        if(snap.empty) resDiv.innerHTML = '<p style="text-align:center; color:#d32f2f">Carpeta no encontrada.</p>';
+        else {
+            const d = snap.docs[0].data();
+            const tasa = d.ganancia ? `${d.ganancia}%` : '-';
+            resDiv.innerHTML = `<div class="card-resultado-vinculo"><div class="card-res-header"><span class="badge-carpeta">#${num} - ${d.nombre ? d.nombre.split(' ')[0] : 'INV'}</span><div class="info-tasa"><span class="text-tasa">${tasa}</span><span class="text-plazo">${d.periodos} meses</span></div></div><div class="monto-grande">${formatearMoneda(d.capital)}</div><div class="card-res-footer"><span class="label-dato">${formatearFecha(d.fecha)}</span><span class="label-dato">${d.unidad || 'General'}</span></div></div><button id="btnConfirmarVinculo" class="btn-primary" style="width:100%">Vincular a mi perfil</button>`;
+            document.getElementById('btnConfirmarVinculo').addEventListener('click', async () => {
+                const btn = document.getElementById('btnConfirmarVinculo'); btn.textContent = "Vinculando..."; btn.disabled = true;
+                try { await setDoc(doc(collection(db, `usuarios/${usuarioActual.uid}/carpetasVinculadas`)), { carpeta: num, fecha: new Date().toISOString() }); mostrarNotificacion("¡Vinculada con éxito!", "success"); input.value = ""; resDiv.innerHTML = ""; modalVinculo.classList.add('hidden'); cargarInversiones(); }
+                catch(e) { mostrarNotificacion("Error: " + e.message, "error"); btn.textContent = "Vincular"; btn.disabled = false; }
             });
-
-            // Actualizamos memoria local
-            usuarioActual.telefono = nuevoTel;
-
-            mostrarNotificacion("Teléfono actualizado correctamente.", "success");
-            bloquearInputs();
-
-        } catch (error) {
-            console.error("Error al actualizar:", error);
-            mostrarNotificacion("Error al guardar los cambios.", "error");
-        } finally {
-            btnGuardar.textContent = "Guardar Cambios";
-            btnGuardar.disabled = false;
         }
-    });
-}
+    } catch(e) { resDiv.innerHTML = '<p style="text-align:center; color:red">Error de conexión.</p>'; }
+});
 
-function bloquearInputs() {
-    inputsEditables.forEach(id => {
-        const el = document.getElementById(id);
-        if(el) {
-            el.disabled = true;
-            el.style.backgroundColor = ''; 
-            el.style.borderColor = '';
-        }
-    });
-    btnHabilitar.classList.remove('hidden');
-    btnCancelar.classList.add('hidden');
-    btnGuardar.classList.add('hidden');
-}
+document.getElementById('btnCerrarSesion')?.addEventListener('click', () => signOut(auth).then(() => window.location.href = '../login.html'));
+document.getElementById('btnCerrarPopup')?.addEventListener('click', () => document.getElementById('popupOverlay').classList.add('hidden'));

@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mi Cuenta | MB Eureka</title>
+    
     <link rel="stylesheet" href="../assets/styles/main.css">
-  
     <link rel="stylesheet" href="style.css">
+    
     <style>.spinner { border: 3px solid #f3f3f3; border-top: 3px solid #342E2E; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
 </head>
 <body>
 
     <nav class="navbar">
-        <div class="nav-brand">Hola, <span id="nombreUsuario">...</span></div>
+        <div class="nav-brand">Hola, <span id="nombreUsuario">Inversor</span></div>
         <div class="nav-actions">
             <a href="https://mbeureka.com/simulador" target="_blank" class="nav-link desktop-only">Simulador</a>
             <button id="btnEditarPerfil" class="nav-link">Mis Datos</button>
@@ -22,9 +23,69 @@
 
     <div class="container">
         
+        <div class="dashboard-grid desktop-row">
+            
+            <div class="left-column">
+                <div class="card stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Próximo Cobro</span>
+                        <span class="icon-calendar" style="font-size: 1.2rem;">📅</span>
+                    </div>
+                    <div class="stat-value-big" id="dashProximoMonto">-</div>
+                    <div class="stat-sub text-muted" id="dashProximoFecha">Sin cobros pendientes</div>
+                    <div class="stat-footer" style="margin-top: auto;">
+                        <span id="dashProximaCarpeta" class="badge-carpeta-mini hidden">Carpeta #000</span>
+                    </div>
+                </div>
 
-        <div class="card">
-            <div class="card-header">
+                <div class="card placeholder-card">
+                    <div class="placeholder-content">
+                        <span style="font-size: 2rem; opacity: 0.2;">🚀</span>
+                        <p>Próximamente: Análisis de Diversificación</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card stat-card full-height-card">
+                <div class="stat-header">
+                    <span class="stat-title">Resumen de Inversiones</span>
+                    <span class="icon-chart" style="font-size: 1.2rem;">📊</span>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <span class="metric-label">Capital Total Invertido</span>
+                        <span class="metric-value" id="kpiTotalInvertido">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Rendimiento Promedio</span>
+                        <span class="metric-value highlight" id="kpiRendimientoPromedio">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Capital Generado (Cobrado)</span>
+                        <span class="metric-value success-text" id="kpiGenerado">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Restante por Cobrar</span>
+                        <span class="metric-value" id="kpiRestante">-</span>
+                    </div>
+                </div>
+
+                <div class="recovery-section">
+                    <div class="progress-labels">
+                        <span id="lblEstadoRecupero">Progreso de Recupero</span>
+                        <span id="lblPorcentajeRecupero">0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="barRecupero" class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-sub" id="lblMensajeRecupero">Calculando proyección...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card section-container">
+            <div class="section-header">
                 <h3>Mis Inversiones</h3>
                 <button id="btnAgregarCarpeta" class="btn-small">+ Vincular Carpeta</button>
             </div>
@@ -33,23 +94,7 @@
                 <p>No tienes inversiones registradas o vinculadas aún.</p>
             </div>
 
-            <div class="table-responsive desktop-only">
-                <table id="tablaInversiones">
-                    <thead>
-                        <tr>
-                            <th>Capital</th>
-                            <th>Plazo</th>
-                            <th>Tasa</th>
-                            <th>Unidad</th>
-                            <th>Fecha</th>
-                            <th>Carpeta</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <div class="mobile-only" id="listaInversionesMobile">
+            <div id="gridInversiones" class="invest-grid">
                 </div>
         </div>
 
@@ -58,24 +103,16 @@
             <div class="calendario-wrapper">
                 <table id="tablaCalendario">
                     <thead>
-                        <tr id="headerCalendario">
-                            <th>Carpeta</th>
-                            </tr>
+                        <tr id="headerCalendario"><th>Carpeta</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
             </div>
         </div>
 
-    </div>
+    </div> 
 
-    <div id="popupOverlay" class="overlay hidden">
-        <div class="popup">
-            <h4 id="popupTitulo" style="margin-bottom:15px; text-align:center;">Detalle</h4>
-            <div id="popupContenido"></div>
-            <button id="btnCerrarPopup" class="btn-primary" style="margin-top:20px; width:100%">Cerrar</button>
-        </div>
-    </div>
+    <div id="popupOverlay" class="overlay hidden"></div>
 
     <div id="modalPerfilOverlay" class="overlay hidden">
         <div class="popup">
@@ -83,42 +120,32 @@
                 <h3 style="margin:0;">Mis Datos</h3>
                 <span id="btnCerrarPerfilX" style="cursor:pointer; font-size:1.5rem; font-weight:bold;">&times;</span>
             </div>
-            
             <form id="formPerfil">
                 <div class="grid-form">
                     <div>
                         <label style="font-size:0.8rem; color:#666; margin-bottom:5px; display:block;">Nombre</label>
                         <input type="text" id="perfilNombre" disabled style="background-color:#eee; border-color:transparent;">
                     </div>
-                    
                     <div>
                         <label style="font-size:0.8rem; color:#666; margin-bottom:5px; display:block;">DNI (Identidad verificada)</label>
                         <input type="text" id="perfilDni" disabled style="background-color:#eee; border-color:transparent;">
                     </div>
-
                     <div>
                         <label style="font-size:0.8rem; color:#666; margin-bottom:5px; display:block;">Email (Usuario)</label>
                         <input type="email" id="perfilMail" disabled style="background-color:#eee; border-color:transparent;">
                     </div>
-                    
                     <div>
                         <label style="font-size:0.8rem; color:#666; margin-bottom:5px; display:block;">Teléfono de Contacto</label>
                         <input type="tel" id="perfilTelefono" disabled placeholder="+54 9 ...">
                     </div>
                 </div>
-                
                 <div id="controlesEdicion" style="margin-top:25px; display:flex; gap:10px; justify-content:flex-end;">
                     <button type="button" id="btnHabilitarEdicion" class="btn-primary">Editar Teléfono</button>
-                    
                     <button type="button" id="btnCancelarEdicion" class="btn-secondary hidden">Cancelar</button>
                     <button type="button" id="btnGuardarEdicion" class="btn-primary hidden">Guardar Cambios</button>
                 </div>
             </form>
         </div>
-    </div>
-
-    <div id="popupOverlay" class="overlay hidden">
-       ...
     </div>
 
     <div id="modalVincularOverlay" class="overlay hidden">
@@ -127,25 +154,20 @@
                 <div>
                     <h3 style="margin:0;">Vincular Inversión</h3>
                     <p style="font-size:0.85rem; color:#666; margin-top:5px; line-height:1.4;">
-                        Ingrese el número de carpeta para visualizar y gestionar inversiones externas (familiares o asociados) directamente desde su panel unificado.
+                        Ingrese el número de carpeta para visualizar inversiones externas.
                     </p>
                 </div>
                 <span id="btnCerrarVincularX" style="cursor:pointer; font-size:1.5rem; font-weight:bold; margin-left:10px;">&times;</span>
             </div>
-            
             <div class="search-box-modal" style="display:flex; gap:10px; margin-bottom:20px;">
-                <input type="text" id="inputNumeroCarpeta" placeholder="Ingresa el N° de carpeta" autocomplete="off" style="flex:1;">
+                <input type="text" id="inputNumeroCarpeta" placeholder="N° de carpeta" autocomplete="off" style="flex:1;">
                 <button id="btnBuscarCarpeta" class="btn-primary">Buscar</button>
             </div>
-
             <div id="resultadoBusquedaModal"></div>
         </div>
     </div>
-    <div id="popupMensaje" class="hidden"></div>
 
-    <script type="module" src="main.js"></script>
-</body>
-</html>
+    <div id="popupMensaje" class="hidden"></div>
 
     <script type="module" src="main.js"></script>
 </body>
