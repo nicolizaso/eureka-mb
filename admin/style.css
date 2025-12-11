@@ -308,8 +308,6 @@ body { background-color: var(--admin-bg); }
     padding: 8px 16px; /* Un poco más chicos que los principales */
 }
 
-/* Agrega esto al final de tu CSS de Admin */
-
 /* Estilo para items de la lista de pagos Admin */
 .admin-payments-list {
     max-height: 400px;
@@ -547,3 +545,85 @@ body { background-color: var(--admin-bg); }
     margin-bottom: 15px; /* Separación del grid */
 }
 .btn-profile-new:hover { background-color: #1b5e20; }
+
+/* --- ESTILOS REINGRESO --- */
+
+/* Lista de selección de carpetas */
+.admin-folders-list {
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.select-folder-card {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+    background: white;
+}
+.select-folder-card:hover {
+    border-color: var(--admin-accent);
+    background-color: #fcfcfc;
+}
+
+.folder-info h4 { margin: 0 0 5px 0; color: var(--admin-accent); }
+.folder-info p { margin: 0; font-size: 0.85rem; color: #666; }
+
+/* Header del Formulario */
+.folder-preview-header {
+    background: #f1f5f9;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--admin-accent);
+}
+
+/* Caja de Impacto (Fecha) */
+.impact-preview {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background-color: #fff8e1; /* Fondo amarillo suave */
+    border: 1px solid #ffe0b2;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+/* Lista estática para el modal (Reingreso) */
+.results-list-static {
+    height: 300px; /* Altura FIJA: Entran 4 o 5 tarjetas cómodas */
+    overflow-y: auto; /* Scroll siempre disponible si hace falta */
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background-color: #f9f9f9; /* Un fondo sutil para diferenciar el área vacía */
+}
+
+/* Ajuste visual para el botón volver */
+#btnVolverBusqueda {
+    font-size: 0.85rem;
+    color: var(--admin-accent);
+    text-decoration: underline;
+    margin-bottom: 10px;
+    display: inline-block;
+}
+
+/* VISUAL DIFFERENCE FOR REINVESTMENT (ESTO ES LO NUEVO) */
+.val-old {
+    text-decoration: line-through;
+    color: #999;
+    font-size: 0.85em;
+    margin-right: 6px;
+}
+.val-new {
+    color: #2e7d32 !important; /* Verde fuerte */
+    font-style: italic;
+    font-weight: 700;
+}

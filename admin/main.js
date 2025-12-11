@@ -3,10 +3,12 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { collection, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
 import { formatearMoneda, formatearFecha } from '../assets/js/utils.js';
 
+// --- VARIABLES GLOBALES ---
 let cacheSolicitudes = [];
 let datosAgrupados = [];
 let numeroFijoID = null;
 let idCarpetaEditando = null;
+let carpetaSeleccionadaReingreso = null;
 
 const unidadesNegocio = [
     { id: 1, nombre: "Parking" },
@@ -15,12 +17,18 @@ const unidadesNegocio = [
     { id: 4, nombre: "Fondo Común" }
 ];
 
-// --- 1. AUTH GUARD ---
+// ======================================================
+// 1. INICIALIZACIÓN
+// ======================================================
 onAuthStateChanged(auth, async (user) => {
-    if (!user) { window.location.href = '../login.html'; return; }
+    if (!user) {
+        window.location.href = '../login.html';
+        return;
+    }
     const docSnap = await getDoc(doc(db, "usuarios", user.uid));
     if (!docSnap.exists() || docSnap.data().rol !== 'admin') {
-        alert("Acceso denegado."); window.location.href = '../cliente/index.html';
+        alert("Acceso denegado.");
+        window.location.href = '../cliente/index.html';
     } else {
         document.getElementById('adminName').textContent = docSnap.data().nombre || 'Admin';
         initAdmin();
@@ -30,137 +38,98 @@ onAuthStateChanged(auth, async (user) => {
 async function initAdmin() {
     await cargarBaseDeDatos();
     cargarSelectUnidades();
-    setupAutocomplete(); // Iniciamos los escuchas del predictivo
+    setupAutocomplete();
 }
 
-// --- 2. CARGA DE DATOS ---
+// ======================================================
+// 2. CARGA DE BASE DE DATOS (CRÍTICO: DEEP LOAD)
+// ======================================================
 async function cargarBaseDeDatos() {
     try {
         const snap = await getDocs(collection(db, "solicitudes"));
-        cacheSolicitudes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         
-        const mapaClientes = {};
+        // Carga profunda: Traemos reingresos para cada carpeta
+        const promesas = snap.docs.map(async (d) => {
+            const data = d.data();
+            const id = d.id;
+            // Traer subcolección de reingresos
+            const reingresosSnap = await getDocs(collection(db, `solicitudes/${id}/reingresos`));
+            const reingresos = reingresosSnap.docs.map(r => r.data());
+            return { id, ...data, reingresos }; 
+        });
+
+        cacheSolicitudes = await Promise.all(promesas);
+        
+        // Agrupar por Cliente
+        const mapa = {};
         cacheSolicitudes.forEach(sol => {
             const dni = sol.dni || 'SIN_DNI';
-            if (!mapaClientes[dni]) {
-                mapaClientes[dni] = {
-                    nombre: sol.nombre || 'Desconocido',
-                    dni: dni,
-                    capitalTotal: 0,
-                    tasasAcumuladas: 0,
-                    carpetasActivas: 0,
-                    listaCarpetas: []
+            if (!mapa[dni]) {
+                mapa[dni] = { 
+                    nombre: sol.nombre || 'Desconocido', 
+                    dni: dni, 
+                    capitalTotal: 0, 
+                    tasasAcumuladas: 0, 
+                    carpetasActivas: 0, 
+                    listaCarpetas: [] 
                 };
             }
-            const cap = parseFloat(String(sol.capital).replace(/[^\d,.-]/g, '').replace(',', '.'));
-            const tasa = parseFloat(String(sol.ganancia).replace(',', '.'));
             
-            mapaClientes[dni].capitalTotal += cap;
-            mapaClientes[dni].tasasAcumuladas += tasa;
-            if ((sol.estado || 'Activa').toLowerCase() === 'activa') mapaClientes[dni].carpetasActivas++;
-            mapaClientes[dni].listaCarpetas.push(sol);
+            // Calcular Capital Real (Base + Reingresos)
+            let cap = parseFloat(String(sol.capital).replace(/[^\d,.-]/g,'').replace(',','.'));
+            if(sol.reingresos) {
+                sol.reingresos.forEach(r => {
+                    cap += parseFloat(String(r.capital).replace(/[^\d,.-]/g,'').replace(',','.'));
+                });
+            }
+            
+            // Tasa Base
+            const tasa = parseFloat(String(sol.ganancia).replace(',', '.'));
+
+            mapa[dni].capitalTotal += cap;
+            mapa[dni].tasasAcumuladas += tasa;
+            
+            if ((sol.estado || 'Activa').toLowerCase() === 'activa') {
+                mapa[dni].carpetasActivas++;
+            }
+            mapa[dni].listaCarpetas.push(sol);
         });
 
-        datosAgrupados = Object.values(mapaClientes);
-    } catch (e) { console.error("Error DB:", e); }
+        datosAgrupados = Object.values(mapa);
+        console.log("Datos actualizados correctamente.");
+
+    } catch (e) {
+        console.error("Error DB:", e);
+        mostrarFeedback("Error", "Fallo al cargar base de datos.", true);
+    }
 }
 
-// --- 3. AUTOCOMPLETE & PREDICTIVO (NUEVO) ---
-function setupAutocomplete() {
-    const inpNombre = document.getElementById('newNombre');
-    const inpDni = document.getElementById('newDni');
-    const listNombre = document.getElementById('listaSugNombre');
-    const listDni = document.getElementById('listaSugDni');
-
-    // Listener Nombre
-    inpNombre.addEventListener('input', function() {
-        const val = this.value;
-        cerrarListas();
-        if (!val) return;
-        
-        // Buscar coincidencias
-        const matches = datosAgrupados.filter(c => c.nombre.toLowerCase().includes(val.toLowerCase()));
-        renderSugerencias(matches, listNombre, inpNombre, inpDni);
-    });
-
-    // Listener DNI
-    inpDni.addEventListener('input', function() {
-        const val = this.value;
-        cerrarListas();
-        if (!val) return;
-        
-        const matches = datosAgrupados.filter(c => c.dni.includes(val));
-        renderSugerencias(matches, listDni, inpNombre, inpDni);
-    });
-
-    // Cerrar si click afuera
-    document.addEventListener('click', function (e) {
-        if(!e.target.matches('.admin-input')) cerrarListas();
-    });
-}
-
-function renderSugerencias(matches, contenedor, inpNombre, inpDni) {
-    if (matches.length === 0) return;
-    
-    contenedor.classList.remove('hidden');
-    matches.slice(0, 5).forEach(c => { // Max 5 sugerencias
-        const item = document.createElement('div');
-        item.className = 'autocomplete-item';
-        item.innerHTML = `<strong>${c.nombre}</strong> <small>${c.dni}</small>`;
-        
-        // Al hacer clic en la sugerencia
-        item.addEventListener('click', () => {
-            inpNombre.value = c.nombre;
-            inpDni.value = c.dni;
-            cerrarListas();
-            // Disparar evento para actualizar ID preview si ya hay unidad
-            inpNombre.dispatchEvent(new Event('input')); 
-        });
-        
-        contenedor.appendChild(item);
-    });
-}
-
-function cerrarListas() {
-    document.getElementById('listaSugNombre').innerHTML = '';
-    document.getElementById('listaSugNombre').classList.add('hidden');
-    document.getElementById('listaSugDni').innerHTML = '';
-    document.getElementById('listaSugDni').classList.add('hidden');
-}
-
-// --- 4. NUEVA INVERSIÓN (MODALES) ---
-
-// A. Abrir Modal (Limpio)
+// ======================================================
+// 3. NUEVA INVERSIÓN (ALTA)
+// ======================================================
 document.getElementById('btnNuevaInversion').addEventListener('click', () => {
-    preCargarInversion("", ""); // Abrir vacío
+    preCargarInversion("", ""); 
 });
 
-// B. Abrir Modal (Pre-cargado desde Perfil) - NUEVA FUNCIÓN GLOBAL
 window.preCargarInversion = (nombre, dni) => {
     document.getElementById('formNuevaCarpeta').reset();
     document.getElementById('newFecha').valueAsDate = new Date();
     document.getElementById('divPlazoOtro').style.display = 'none';
     
-    // Inyectar datos
     document.getElementById('newNombre').value = nombre || "";
     document.getElementById('newDni').value = dni || "";
     
-    // Reset ID
     numeroFijoID = null; 
     document.getElementById('idDisplay').textContent = "SELECCIONE UNIDAD";
     document.getElementById('idDisplay').style.color = "#888";
     document.getElementById('newUnidad').value = ""; 
     
-    // Cerrar otros modales si están abiertos (ej: Perfil)
     document.getElementById('adminModal').classList.add('hidden');
-    
     document.getElementById('modalNuevaInversion').classList.remove('hidden');
     
-    // Si viene con nombre, actualizamos el ID preview simulando input
     if(nombre) actualizarVistaPreviaID();
 };
 
-// C. Lógica ID Dinámico
 const inputNombre = document.getElementById('newNombre');
 const selectUnidad = document.getElementById('newUnidad');
 
@@ -179,8 +148,11 @@ const actualizarVistaPreviaID = () => {
     let iniciales = "XX";
     if (nombre.length > 0) {
         const partes = nombre.split(' ').filter(p => p.length > 0);
-        if (partes.length >= 2) iniciales = (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
-        else if (partes.length === 1) iniciales = (partes[0][0] + 'X').toUpperCase();
+        if (partes.length >= 2) {
+            iniciales = (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+        } else if (partes.length === 1) {
+            iniciales = (partes[0][0] + 'X').toUpperCase();
+        }
     }
 
     display.textContent = `${numeroFijoID} - ${iniciales}/${unidadVal}`;
@@ -190,14 +162,53 @@ const actualizarVistaPreviaID = () => {
 inputNombre.addEventListener('input', actualizarVistaPreviaID);
 selectUnidad.addEventListener('change', actualizarVistaPreviaID);
 
+function setupAutocomplete() {
+    const inpNombre = document.getElementById('newNombre');
+    const inpDni = document.getElementById('newDni');
+    const listNombre = document.getElementById('listaSugNombre');
+    const listDni = document.getElementById('listaSugDni');
+
+    inpNombre.addEventListener('input', function() {
+        const val = this.value; cerrarListas(); if (!val) return;
+        const matches = datosAgrupados.filter(c => c.nombre.toLowerCase().includes(val.toLowerCase()));
+        renderSugerencias(matches, listNombre, inpNombre, inpDni);
+    });
+
+    inpDni.addEventListener('input', function() {
+        const val = this.value; cerrarListas(); if (!val) return;
+        const matches = datosAgrupados.filter(c => c.dni.includes(val));
+        renderSugerencias(matches, listDni, inpNombre, inpDni);
+    });
+
+    document.addEventListener('click', (e) => { if(!e.target.matches('.admin-input')) cerrarListas(); });
+}
+
+function renderSugerencias(matches, contenedor, inpNombre, inpDni) {
+    if (matches.length === 0) return;
+    contenedor.classList.remove('hidden');
+    matches.slice(0, 5).forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        item.innerHTML = `<strong>${c.nombre}</strong> <small>${c.dni}</small>`;
+        item.addEventListener('click', () => {
+            inpNombre.value = c.nombre; inpDni.value = c.dni; cerrarListas();
+            inpNombre.dispatchEvent(new Event('input')); 
+        });
+        contenedor.appendChild(item);
+    });
+}
+
+function cerrarListas() {
+    document.getElementById('listaSugNombre').classList.add('hidden');
+    document.getElementById('listaSugDni').classList.add('hidden');
+}
+
 function cargarSelectUnidades() {
     const select = document.getElementById('newUnidad');
     select.innerHTML = '<option value="" disabled selected>Selecciona una Unidad de Negocio</option>';
     unidadesNegocio.forEach(un => {
         const opt = document.createElement('option');
-        opt.value = un.id;
-        opt.textContent = `${un.id} - ${un.nombre}`;
-        select.appendChild(opt);
+        opt.value = un.id; opt.textContent = `${un.id} - ${un.nombre}`; select.appendChild(opt);
     });
 }
 
@@ -209,7 +220,6 @@ selectPlazo.addEventListener('change', () => {
     else { div.style.display = 'none'; input.required = false; }
 });
 
-// GUARDAR
 document.getElementById('formNuevaCarpeta').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
@@ -221,6 +231,7 @@ document.getElementById('formNuevaCarpeta').addEventListener('submit', async (e)
         const capital = document.getElementById('newCapital').value;
         const tasa = document.getElementById('newTasa').value;
         const fecha = document.getElementById('newFecha').value;
+        
         let periodos = selectPlazo.value;
         if (periodos === 'otro') periodos = document.getElementById('newPlazoInput').value;
 
@@ -232,14 +243,15 @@ document.getElementById('formNuevaCarpeta').addEventListener('submit', async (e)
         const nombreUnidadFull = objUnidad ? `${idUnidad} - ${objUnidad.nombre}` : `${idUnidad} - General`;
 
         const nuevaSolicitud = {
-            carpeta: idFinal, nombre: nombre, dni: dni, capital: parseFloat(capital), ganancia: parseFloat(tasa),
-            periodos: parseInt(periodos), fecha: fecha, unidad: nombreUnidadFull, estado: "Activa",
+            carpeta: idFinal, nombre, dni, capital: parseFloat(capital), ganancia: parseFloat(tasa),
+            periodos: parseInt(periodos), fecha, unidad: nombreUnidadFull, estado: "Activa",
             comentario: "", pagosRealizados: []
         };
 
         await addDoc(collection(db, "solicitudes"), nuevaSolicitud);
+        
         document.getElementById('modalNuevaInversion').classList.add('hidden');
-        mostrarFeedback("¡Carpeta Creada!", `Se generó correctamente: ${idFinal}`);
+        mostrarFeedback("¡Carpeta Creada!", `Se generó: ${idFinal}`);
 
         await cargarBaseDeDatos();
         const clienteActualizado = datosAgrupados.find(c => c.dni === dni);
@@ -249,37 +261,222 @@ document.getElementById('formNuevaCarpeta').addEventListener('submit', async (e)
     finally { btn.disabled = false; btn.textContent = "Crear Carpeta"; }
 });
 
-// --- 5. BUSCADOR ---
-const inputSearch = document.getElementById('inputBuscador');
-const listaResultados = document.getElementById('listaResultados');
+// ======================================================
+// 4. REINGRESO (LÓGICA CORREGIDA)
+// ======================================================
 
-inputSearch.addEventListener('input', (e) => {
-    const termino = e.target.value.trim().toLowerCase();
-    if (termino.length === 0) { listaResultados.classList.add('hidden'); return; }
-    const resultados = datosAgrupados.filter(c => (c.nombre && c.nombre.toLowerCase().includes(termino)) || (c.dni && c.dni.includes(termino)));
-    renderResultados(resultados);
+const step1 = document.getElementById('paso1_Busqueda');
+const step2 = document.getElementById('paso2_Seleccion');
+const listaResReingreso = document.getElementById('listaResultadosReingreso');
+const listaCarpetasUser = document.getElementById('listaCarpetasDelUsuario');
+const tituloModalReingreso = document.getElementById('tituloModalReingreso');
+
+// A. Abrir Buscador
+document.getElementById('btnAbrirBuscadorReingreso').addEventListener('click', () => {
+    document.getElementById('inputBuscarReingreso').value = '';
+    renderizarListaReingreso(datosAgrupados); // Muestra todos de una
+    step1.classList.remove('hidden');
+    step2.classList.add('hidden');
+    tituloModalReingreso.textContent = "Seleccionar Inversor";
+    document.getElementById('modalBuscadorReingreso').classList.remove('hidden');
+    document.getElementById('inputBuscarReingreso').focus();
 });
 
-function renderResultados(lista) {
-    listaResultados.innerHTML = '';
-    if (lista.length === 0) { listaResultados.innerHTML = '<div style="padding:15px; text-align:center;">No encontrado.</div>'; listaResultados.classList.remove('hidden'); return; }
+// B. Filtro
+document.getElementById('inputBuscarReingreso').addEventListener('input', (e) => {
+    const val = e.target.value.toLowerCase();
+    if (val.length === 0) { renderizarListaReingreso(datosAgrupados); return; }
+    const matches = datosAgrupados.filter(c => (c.nombre && c.nombre.toLowerCase().includes(val)) || (c.dni && c.dni.includes(val)));
+    renderizarListaReingreso(matches);
+});
+
+function renderizarListaReingreso(lista) {
+    listaResReingreso.innerHTML = '';
+    if (lista.length === 0) { listaResReingreso.innerHTML = '<div style="padding:20px; color:#666; text-align:center">No se encontraron inversores.</div>'; return; }
+    lista.forEach(cliente => {
+        const div = document.createElement('div');
+        div.className = 'result-card-profile';
+        const badge = cliente.carpetasActivas > 0 ? 'badge-activo' : 'badge-inactivo';
+        div.innerHTML = `<div class="profile-left"><div class="profile-name">${cliente.nombre}</div><div class="profile-dni">DNI: ${cliente.dni}</div></div><div class="profile-right"><div class="profile-capital">${formatearMoneda(cliente.capitalTotal)}</div><span class="profile-badge ${badge}">${cliente.carpetasActivas} Activas</span></div>`;
+        div.addEventListener('click', () => mostrarCarpetasParaReingreso(cliente));
+        listaResReingreso.appendChild(div);
+    });
+}
+
+function mostrarCarpetasParaReingreso(cliente) {
+    step1.classList.add('hidden');
+    step2.classList.remove('hidden');
+    tituloModalReingreso.textContent = `Carpetas de ${cliente.nombre.split(' ')[0]}`;
+    listaCarpetasUser.innerHTML = '';
+    
+    const carpetas = cliente.listaCarpetas.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+    
+    if (carpetas.length === 0) { listaCarpetasUser.innerHTML = '<div style="padding:15px; text-align:center; color:#666">Sin carpetas activas.</div>'; return; }
+    
+    carpetas.forEach(s => {
+        // Cálculo visual capital real
+        const capitalReal = calcularCapitalTotal(s);
+        
+        const div = document.createElement('div');
+        div.className = 'select-folder-card';
+        div.innerHTML = `
+            <div class="folder-info">
+                <h4>#${s.carpeta} - ${s.unidad}</h4>
+                <p>Capital Actual: <strong>${formatearMoneda(capitalReal)}</strong></p>
+                <p style="font-size:0.8rem; color:#888">Inicio: ${formatearFecha(s.fecha)}</p>
+            </div>
+            <button class="btn-admin-primary btn-sm">Cargar Reingreso</button>
+        `;
+        div.querySelector('button').addEventListener('click', () => abrirFormularioReingreso(s));
+        listaCarpetasUser.appendChild(div);
+    });
+}
+
+document.getElementById('btnVolverBusqueda').addEventListener('click', () => {
+    step2.classList.add('hidden');
+    step1.classList.remove('hidden');
+    tituloModalReingreso.textContent = "Seleccionar Inversor";
+    const val = document.getElementById('inputBuscarReingreso').value;
+    if(val) document.getElementById('inputBuscarReingreso').dispatchEvent(new Event('input'));
+    else renderizarListaReingreso(datosAgrupados);
+    document.getElementById('inputBuscarReingreso').focus();
+});
+
+// C. Abrir Formulario Final (Con precarga TASA y PLAZO)
+function abrirFormularioReingreso(solicitud) {
+    carpetaSeleccionadaReingreso = solicitud;
+    document.getElementById('modalBuscadorReingreso').classList.add('hidden');
+    document.getElementById('adminModal').classList.add('hidden');
+    
+    document.getElementById('formReingreso').reset();
+    document.getElementById('reingresoFecha').valueAsDate = new Date();
+    
+    // PRECARGA: Tasa Actual y Plazo 12
+    const tasaActual = obtenerTasaActual(solicitud);
+    document.getElementById('reingresoTasa').value = tasaActual;
+    document.getElementById('reingresoPlazo').value = "12"; // Extensión default
+    
+    const header = document.getElementById('headerReingreso');
+    header.innerHTML = `
+        <div style="font-weight:bold; color:var(--admin-accent)">#${solicitud.carpeta}</div>
+        <div>${solicitud.nombre}</div>
+        <div style="font-size:0.85rem; color:#666">Tasa Vigente: ${tasaActual}% | Plazo Actual: ${solicitud.periodos} meses</div>
+    `;
+    
+    actualizarImpactoFecha();
+    document.getElementById('modalFormReingreso').classList.remove('hidden');
+}
+
+// Wrapper global
+window.abrirFormularioReingresoManual = (id) => {
+    const s = cacheSolicitudes.find(x => x.id === id);
+    if(s) abrirFormularioReingreso(s);
+};
+
+const inpFechaReingreso = document.getElementById('reingresoFecha');
+inpFechaReingreso.addEventListener('change', actualizarImpactoFecha);
+
+function actualizarImpactoFecha() {
+    const fechaInput = inpFechaReingreso.value;
+    if(!fechaInput) return;
+    const [y, m, d] = fechaInput.split('-').map(Number);
+    const fechaIngreso = new Date(y, m - 1, d);
+    const fechaImpacto = new Date(fechaIngreso.getFullYear(), fechaIngreso.getMonth() + 2, 1);
+    const mesImpacto = fechaImpacto.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+    document.getElementById('txtImpactoFecha').textContent = `La cuota aumentará a partir de: ${mesImpacto.toUpperCase()}`;
+    document.getElementById('txtImpactoFecha').dataset.impacto = fechaImpacto.toISOString().slice(0, 7);
+}
+
+// D. GUARDAR (CORREGIDO PLAZO)
+document.getElementById('formReingreso').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if(!carpetaSeleccionadaReingreso) return;
+    
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true; btn.textContent = "Guardando...";
+
+    try {
+        const monto = parseFloat(document.getElementById('reingresoMonto').value);
+        const tasa = parseFloat(document.getElementById('reingresoTasa').value);
+        const fecha = document.getElementById('reingresoFecha').value;
+        const impactoKey = document.getElementById('txtImpactoFecha').dataset.impacto;
+        
+        // Conversión segura de Plazo
+        const plazoExtra = parseInt(document.getElementById('reingresoPlazo').value) || 0;
+
+        const nuevoReingreso = {
+            fecha: fecha,
+            capital: monto,
+            tasa: tasa,
+            impactoDesde: impactoKey,
+            fechaCarga: new Date().toISOString()
+        };
+
+        // 1. Guardar subcolección
+        const ref = collection(db, `solicitudes/${carpetaSeleccionadaReingreso.id}/reingresos`);
+        await addDoc(ref, nuevoReingreso);
+
+        // 2. Actualizar Plazo en Documento Padre (CORREGIDO)
+        if (plazoExtra > 0) {
+            const plazoActual = parseInt(carpetaSeleccionadaReingreso.periodos);
+            const nuevoPlazo = plazoActual + plazoExtra;
+            
+            await updateDoc(doc(db, "solicitudes", carpetaSeleccionadaReingreso.id), {
+                periodos: nuevoPlazo
+            });
+        }
+
+        mostrarFeedback("¡Reingreso Exitoso!", `Capital agregado. Plazo extendido ${plazoExtra} meses.`);
+        document.getElementById('modalFormReingreso').classList.add('hidden');
+        
+        // 3. Recargar y Redirigir
+        await cargarBaseDeDatos();
+        const clienteActualizado = datosAgrupados.find(c => c.dni === carpetaSeleccionadaReingreso.dni);
+        if (clienteActualizado) setTimeout(() => abrirModalPerfil(clienteActualizado), 800);
+
+    } catch (err) {
+        mostrarFeedback("Error", err.message, true);
+    } finally {
+        btn.disabled = false; btn.textContent = "Confirmar Reingreso";
+    }
+});
+
+// ======================================================
+// 5. BUSCADOR PRINCIPAL (GESTIÓN)
+// ======================================================
+const inputBuscador = document.getElementById('inputBuscador');
+const listaMain = document.getElementById('listaResultados');
+
+inputBuscador.addEventListener('input', (e) => {
+    const val = e.target.value.trim().toLowerCase();
+    if (val.length === 0) { listaMain.classList.add('hidden'); return; }
+    const resultados = datosAgrupados.filter(c => (c.nombre && c.nombre.toLowerCase().includes(val)) || (c.dni && c.dni.includes(val)));
+    renderMainResults(resultados);
+});
+
+function renderMainResults(lista) {
+    listaMain.innerHTML = '';
+    if (lista.length === 0) { listaMain.innerHTML = '<div style="padding:15px; text-align:center;">No encontrado.</div>'; listaMain.classList.remove('hidden'); return; }
     lista.forEach(cliente => {
         const div = document.createElement('div');
         div.className = 'result-card-profile';
         const badge = cliente.carpetasActivas > 0 ? 'badge-activo' : 'badge-inactivo';
         div.innerHTML = `<div class="profile-left"><div class="profile-name">${cliente.nombre}</div><div class="profile-dni">DNI: ${cliente.dni}</div></div><div class="profile-right"><div class="profile-capital">${formatearMoneda(cliente.capitalTotal)}</div><span class="profile-badge ${badge}">${cliente.carpetasActivas} Activas</span></div>`;
         div.addEventListener('click', () => abrirModalPerfil(cliente));
-        listaResultados.appendChild(div);
+        listaMain.appendChild(div);
     });
-    listaResultados.classList.remove('hidden');
+    listaMain.classList.remove('hidden');
 }
 
-// --- 6. MODAL PERFIL (CON BOTÓN NUEVA CARPETA) ---
+// ======================================================
+// 6. PERFIL INVERSOR (VISUALIZACIÓN TACHADA CORREGIDA)
+// ======================================================
 function abrirModalPerfil(cliente) {
     const modal = document.getElementById('adminModal');
     const title = document.getElementById('modalTitle');
     const body = document.getElementById('modalBody');
     title.textContent = cliente.nombre;
+    
     const hoyKey = new Date().toISOString().slice(0, 7);
     let totalCobrar = 0;
     cliente.listaCarpetas.forEach(c => {
@@ -292,11 +489,8 @@ function abrirModalPerfil(cliente) {
 
     let html = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <button class="btn-profile-new" onclick="preCargarInversion('${cliente.nombre}', '${cliente.dni}')">
-                <span>✨</span> Nueva Carpeta
-            </button>
+            <button class="btn-profile-new" onclick="preCargarInversion('${cliente.nombre}', '${cliente.dni}')"><span>✨</span> Nueva Carpeta</button>
         </div>
-
         <div class="profile-summary-grid">
             <div class="p-stat-box"><span class="p-stat-label">Capital Total</span><span class="p-stat-val">${formatearMoneda(cliente.capitalTotal)}</span></div>
             <div class="p-stat-box"><span class="p-stat-label">Carpetas Activas</span><span class="p-stat-val">${cliente.carpetasActivas}</span></div>
@@ -307,31 +501,70 @@ function abrirModalPerfil(cliente) {
     `;
     
     const carpetas = [...cliente.listaCarpetas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+    
     carpetas.forEach(c => {
         const est = c.estado||'Activa';
-        const info = calcularInfoCuota(c);
+        const info = calcularInfoCuota(c); // Trae "Cuota X / TOTAL_NUEVO"
         const bell = (c.comentario && c.comentario.trim().length > 0) ? 'active-bell' : '';
-        html += `<div class="admin-folder-card"><div class="af-header"><span class="af-id">#${c.carpeta}</span><select class="status-select ${est.toLowerCase()}" onchange="cambiarEstado('${c.id}', this)"><option value="Activa" ${est==='Activa'?'selected':''}>Activa</option><option value="Pendiente" ${est==='Pendiente'?'selected':''}>Pendiente</option><option value="Bloqueada" ${est==='Bloqueada'?'selected':''}>Bloqueada</option><option value="Finalizada" ${est==='Finalizada'?'selected':''}>Finalizada</option></select></div><div class="af-grid"><div class="af-item"><label>Capital</label><span>${formatearMoneda(c.capital)}</span></div><div class="af-item"><label>Cuota Actual</label><span>${info}</span></div><div class="af-item"><label>Tasa</label><span>${c.ganancia}%</span></div><div class="af-item"><label>Inicio</label><span>${formatearFecha(c.fecha)}</span></div></div><div class="af-actions"><button class="btn-history" onclick="abrirHistorialPagos('${c.id}')">📅 Historial</button><button class="btn-icon-action ${bell}" onclick="editarNotificacion('${c.id}', '${c.comentario||''}')">🔔</button><button class="btn-reinvest" onclick="abrirReingreso('${c.id}')">Cargar Reingreso</button></div></div>`;
+        
+        // --- VISUALIZACIÓN CAPITAL (Base vs Total) ---
+        const capitalBase = parseFloat(String(c.capital).replace(/[^\d,.-]/g,'').replace(',','.'));
+        const capitalTotal = calcularCapitalTotal(c);
+        let displayCapital = formatearMoneda(capitalBase);
+        
+        if(capitalTotal > capitalBase) {
+            displayCapital = `<span class="val-old">${formatearMoneda(capitalBase)}</span> <span class="val-new">${formatearMoneda(capitalTotal)}</span>`;
+        }
+
+        // --- VISUALIZACIÓN TASA (Base vs Actual) ---
+        const tasaBase = parseFloat(String(c.ganancia).replace(',', '.'));
+        const tasaActual = obtenerTasaActual(c);
+        let displayTasa = `${tasaBase}%`;
+        
+        if(tasaActual !== tasaBase) {
+            displayTasa = `<span class="val-old">${tasaBase}%</span> <span class="val-new">${tasaActual}%</span>`;
+        }
+
+        // --- VISUALIZACIÓN FECHA ---
+        let displayFecha = formatearFecha(c.fecha);
+        // Si hay reingreso, mostrar la fecha del último
+        if(c.reingresos && c.reingresos.length > 0) {
+            const ult = [...c.reingresos].sort((a,b) => new Date(a.fecha) - new Date(b.fecha)).pop();
+            displayFecha += `<br><span style="font-size:0.75rem; color:#2e7d32; font-style:italic;">Reingreso: ${formatearFecha(ult.fecha)}</span>`;
+        }
+
+        html += `
+            <div class="admin-folder-card">
+                <div class="af-header">
+                    <span class="af-id">#${c.carpeta}</span>
+                    <select class="status-select ${est.toLowerCase()}" onchange="cambiarEstado('${c.id}', this)">
+                        <option value="Activa" ${est==='Activa'?'selected':''}>Activa</option>
+                        <option value="Pendiente" ${est==='Pendiente'?'selected':''}>Pendiente</option>
+                        <option value="Bloqueada" ${est==='Bloqueada'?'selected':''}>Bloqueada</option>
+                        <option value="Finalizada" ${est==='Finalizada'?'selected':''}>Finalizada</option>
+                    </select>
+                </div>
+                <div class="af-grid">
+                    <div class="af-item"><label>Capital</label><span>${displayCapital}</span></div>
+                    <div class="af-item"><label>Cuota Actual</label><span>${info}</span></div>
+                    <div class="af-item"><label>Tasa</label><span>${displayTasa}</span></div>
+                    <div class="af-item"><label>Inicio</label><span>${displayFecha}</span></div>
+                </div>
+                <div class="af-actions">
+                    <button class="btn-history" onclick="abrirHistorialPagos('${c.id}')">📅 Historial</button>
+                    <button class="btn-icon-action ${bell}" onclick="editarNotificacion('${c.id}', '${c.comentario||''}')">🔔</button>
+                    <button class="btn-reinvest" onclick="abrirFormularioReingresoManual('${c.id}')">Cargar Reingreso</button>
+                </div>
+            </div>
+        `;
     });
     html += `</div>`;
     body.innerHTML = html;
     modal.classList.remove('hidden');
-    listaResultados.classList.add('hidden');
+    listaMain.classList.add('hidden');
 }
 
-// ... Resto de funciones (abrirHistorialPagos, togglePago, helpers, etc) se mantienen igual ...
-// (Para ahorrar espacio, asume que el resto del archivo es idéntico a la versión anterior que te pasé completa. 
-// Solo cambiamos la parte de arriba y agregamos setupAutocomplete).
-
-// --- HELPERS REQUERIDOS PARA COMPLETAR EL ARCHIVO ---
-function mostrarFeedback(titulo, mensaje, esError = false) {
-    const modal = document.getElementById('modalFeedback');
-    document.getElementById('fbIcon').textContent = esError ? '❌' : '✅';
-    document.getElementById('fbTitle').textContent = titulo;
-    document.getElementById('fbMessage').textContent = mensaje;
-    modal.classList.remove('hidden');
-}
-
+// --- 7. PAGOS ---
 window.abrirHistorialPagos = (id) => {
     const c = cacheSolicitudes.find(s=>s.id===id); if(!c) return;
     const modal = document.getElementById('modalPagosAdmin');
@@ -360,30 +593,91 @@ window.togglePago = async (id, key, chk) => {
     } catch(e) { alert("Error"); chk.checked=!done; }
 };
 
-function calcularPagosSimples(s) {
-    const p=[]; const cap=parseFloat(String(s.capital).replace(/[^\d,.-]/g,'').replace(',','.'));
-    const g=parseFloat(String(s.ganancia).replace(',','.'))/100; const m=cap*g;
-    const [y,mo,d]=s.fecha.split('-').map(Number); const fi=new Date(y,mo-1,d);
-    for(let i=0; i<parseInt(s.periodos); i++){ const fp=new Date(fi.getFullYear(),fi.getMonth()+i+1,1); const k=`${fp.getFullYear()}-${String(fp.getMonth()+1).padStart(2,'0')}`; p.push({key:k,monto:m}); }
-    const fd=new Date(fi.getFullYear(),fi.getMonth()+parseInt(s.periodos)+1,1); const kd=`${fd.getFullYear()}-${String(fd.getMonth()+1).padStart(2,'0')}`; p.push({key:kd,monto:cap,esCapital:true});
-    return p;
+// --- HELPERS ---
+function mostrarFeedback(title, msg, isErr=false) {
+    const m = document.getElementById('modalFeedback');
+    document.getElementById('fbIcon').textContent = isErr?'❌':'✅';
+    document.getElementById('fbTitle').textContent = title;
+    document.getElementById('fbMessage').textContent = msg;
+    m.classList.remove('hidden');
 }
+
+function calcularCapitalTotal(s) {
+    let total = parseFloat(String(s.capital).replace(/[^\d,.-]/g,'').replace(',','.'));
+    if(s.reingresos) s.reingresos.forEach(r => total += parseFloat(String(r.capital).replace(/[^\d,.-]/g,'').replace(',','.')));
+    return total;
+}
+
+function obtenerTasaActual(s) {
+    let tasa = parseFloat(String(s.ganancia).replace(',', '.'));
+    if(s.reingresos && s.reingresos.length > 0) {
+        // Ordenar por impacto
+        const ult = [...s.reingresos].sort((a,b) => a.impactoDesde.localeCompare(b.impactoDesde)).pop();
+        if(ult && ult.tasa) tasa = parseFloat(String(ult.tasa));
+    }
+    return tasa;
+}
+
+function calcularPagosSimples(solicitud) {
+    const pagos = [];
+    let capitalBase = parseFloat(String(solicitud.capital).replace(/[^\d,.-]/g,'').replace(',','.'));
+    let tasaBase = parseFloat(String(solicitud.ganancia).replace(',', '.')) / 100;
+    const [y, m, d] = solicitud.fecha.split('-').map(Number);
+    const fInicio = new Date(y, m - 1, d);
+    const reingresos = solicitud.reingresos || [];
+    
+    // IMPORTANTE: periodos viene actualizado de DB si se extendió
+    for (let i = 0; i < parseInt(solicitud.periodos); i++) {
+        const fPago = new Date(fInicio.getFullYear(), fInicio.getMonth() + i + 1, 1);
+        const keyPago = `${fPago.getFullYear()}-${String(fPago.getMonth() + 1).padStart(2, '0')}`;
+        
+        let capitalVigente = capitalBase;
+        let tasaVigente = tasaBase;
+        
+        reingresos.forEach(r => {
+            // Si la fecha de impacto ya llegó
+            if (r.impactoDesde <= keyPago) {
+                capitalVigente += parseFloat(String(r.capital));
+                tasaVigente = parseFloat(String(r.tasa)) / 100;
+            }
+        });
+        const montoCuota = capitalVigente * tasaVigente;
+        pagos.push({ key: keyPago, monto: montoCuota });
+    }
+    const fDevol = new Date(fInicio.getFullYear(), fInicio.getMonth() + parseInt(solicitud.periodos) + 1, 1);
+    const keyDev = `${fDevol.getFullYear()}-${String(fDevol.getMonth() + 1).padStart(2, '0')}`;
+    
+    let capitalFinal = capitalBase;
+    reingresos.forEach(r => capitalFinal += parseFloat(String(r.capital)));
+    pagos.push({ key: keyDev, monto: capitalFinal, esCapital: true });
+    return pagos;
+}
+
 function calcularInfoCuota(s) {
-    const [y,mo,d]=s.fecha.split('-').map(Number); const fi=new Date(y,mo-1,d); const hoy=new Date();
-    let m=(hoy.getFullYear()-fi.getFullYear())*12+(hoy.getMonth()-fi.getMonth()); if(hoy.getDate()>=d) m++;
-    const t=parseInt(s.periodos); const act=Math.max(0,Math.min(m,t));
-    if(act>t) return "Finalizada";
-    const cap=parseFloat(String(s.capital).replace(/[^\d,.-]/g,'').replace(',','.')); const g=parseFloat(String(s.ganancia).replace(',','.'));
-    return `${act}/${t} • ${formatearMoneda(cap*(g/100))}`;
+    const pagos = calcularPagosSimples(s);
+    const [y, m, d] = s.fecha.split('-').map(Number);
+    const inicio = new Date(y, m - 1, d);
+    const hoy = new Date();
+    let meses = (hoy.getFullYear() - inicio.getFullYear()) * 12 + (hoy.getMonth() - inicio.getMonth());
+    if(hoy.getDate() >= d) meses++;
+    const total = parseInt(s.periodos);
+    const actual = Math.max(0, Math.min(meses, total));
+    
+    if (actual > total) return "Finalizada";
+    
+    const fPagoAprox = new Date(inicio.getFullYear(), inicio.getMonth() + actual, 1);
+    const keyAprox = `${fPagoAprox.getFullYear()}-${String(fPagoAprox.getMonth() + 1).padStart(2, '0')}`;
+    const pagoObj = pagos.find(p => p.key === keyAprox) || pagos[actual-1] || {monto:0};
+    return `${actual}/${total} • ${formatearMoneda(pagoObj.monto)}`;
 }
-window.cambiarEstado = async(id,sel)=>{ try{ await updateDoc(doc(db,"solicitudes",id),{estado:sel.value}); sel.className=`status-select ${sel.value.toLowerCase()}`; }catch(e){alert("Error");}};
-let idEditando = null;
-window.editarNotificacion = (id, txt) => { idEditando = id; document.getElementById('txtNotificacion').value = (txt && txt!=='undefined') ? txt : ''; document.getElementById('modalNotificacion').classList.remove('hidden'); };
-document.getElementById('btnSaveNotif').addEventListener('click', async()=>{ if(!idEditando) return; const val = document.getElementById('txtNotificacion').value.trim(); try { await updateDoc(doc(db,"solicitudes",idEditando), {comentario: val}); const item = cacheSolicitudes.find(x=>x.id===idEditando); if(item) item.comentario = val; mostrarFeedback("Guardado", "Notificación actualizada"); document.getElementById('modalNotificacion').classList.add('hidden'); } catch(e) { mostrarFeedback("Error", e.message, true); } });
-const cerrarNotif = () => document.getElementById('modalNotificacion').classList.add('hidden');
-document.getElementById('closeNotif').addEventListener('click', cerrarNotif);
-document.getElementById('btnCancelNotif').addEventListener('click', cerrarNotif);
-window.abrirReingreso = (id)=> alert("Próximamente");
+
+window.cambiarEstado = async (id, sel) => { try { await updateDoc(doc(db,"solicitudes",id), {estado:sel.value}); sel.className = `status-select ${sel.value.toLowerCase()}`; } catch(e) { mostrarFeedback("Error", "No se cambió el estado", true); } };
+window.editarNotificacion = (id, txt) => { idCarpetaEditando = id; document.getElementById('txtNotificacion').value = (txt && txt!=='undefined') ? txt : ''; document.getElementById('modalNotificacion').classList.remove('hidden'); };
+document.getElementById('btnSaveNotif').addEventListener('click', async()=>{ if(!idCarpetaEditando) return; const val = document.getElementById('txtNotificacion').value.trim(); try { await updateDoc(doc(db,"solicitudes",idCarpetaEditando), {comentario: val}); const item = cacheSolicitudes.find(x=>x.id===idCarpetaEditando); if(item) item.comentario = val; const btn = document.querySelector(`button[onclick*="${idCarpetaEditando}"]`); if(btn) { val.length>0 ? btn.classList.add('active-bell') : btn.classList.remove('active-bell'); btn.setAttribute('onclick', `editarNotificacion('${idCarpetaEditando}', '${val.replace(/'/g, "\\'")}')`); } mostrarFeedback("Guardado", "Mensaje actualizado"); document.getElementById('modalNotificacion').classList.add('hidden'); } catch(e) { mostrarFeedback("Error", e.message, true); } });
+
+// Close handlers
 document.getElementById('closeModal').addEventListener('click',()=>document.getElementById('adminModal').classList.add('hidden'));
 document.getElementById('closeModalPagos').addEventListener('click',()=>document.getElementById('modalPagosAdmin').classList.add('hidden'));
+document.getElementById('closeNotif').addEventListener('click',()=>document.getElementById('modalNotificacion').classList.add('hidden'));
+document.getElementById('btnCancelNotif').addEventListener('click',()=>document.getElementById('modalNotificacion').classList.add('hidden'));
 document.getElementById('btnLogout').addEventListener('click',()=>signOut(auth).then(()=>window.location.href='../login.html'));
