@@ -73,24 +73,99 @@ body { background-color: var(--admin-bg); }
 .full-width { width: 100%; }
 .btn-text { background: none; border: none; color: var(--accent); cursor: pointer; font-weight: 600; text-align: left; padding: 0; margin-top: 10px; }
 
-/* RESULTADOS DE BÚSQUEDA */
+/* --- RESULTADOS DE BÚSQUEDA (PERFILES) --- */
+
 .results-list {
-    margin-top: 15px;
-    max-height: 300px;
+    position: absolute; /* Flotante sobre el contenido */
+    top: 100%; 
+    left: 0; 
+    right: 0;
+    background: white;
+    border-radius: 0 0 12px 12px; /* Solo bordes de abajo */
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    border: 1px solid #e0e0e0;
+    border-top: none;
+    max-height: 400px;
     overflow-y: auto;
-    border-top: 1px solid #eee;
-    padding-top: 10px;
+    z-index: 100;
 }
 
-.result-item {
-    padding: 10px;
+/* Tarjeta de Perfil en Buscador */
+.result-card-profile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
     border-bottom: 1px solid #f0f0f0;
     cursor: pointer;
     transition: background 0.2s;
 }
-.result-item:hover { background-color: #f9f9f9; }
-.result-main { font-weight: 700; color: var(--admin-accent); display: flex; justify-content: space-between; }
-.result-sub { font-size: 0.85rem; color: #666; }
+
+.result-card-profile:hover {
+    background-color: #f8f9fa;
+}
+
+.result-card-profile:last-child {
+    border-bottom: none;
+}
+
+/* Info Izquierda */
+.profile-name {
+    font-weight: 700;
+    color: var(--admin-accent);
+    font-size: 1rem;
+    margin-bottom: 2px;
+}
+
+.profile-dni {
+    font-size: 0.85rem;
+    color: #888;
+}
+
+/* Info Derecha */
+.profile-right {
+    text-align: right;
+}
+
+.profile-capital {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: var(--admin-accent);
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+/* Badges */
+.profile-badge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.badge-activo {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+.badge-inactivo {
+    background-color: #f5f5f5;
+    color: #666;
+    border: 1px solid #ddd;
+}
+
+/* Ajuste al contenedor de búsqueda para soportar posición absoluta */
+.search-section { /* Si no tenías esta clase, revisa el div padre del input */
+    position: relative; 
+}
+/* OJO: En tu HTML anterior, el padre era .card.admin-card.action-card. 
+   Asegúrate de agregar 'position: relative' a esa tarjeta para que la lista no se vaya volando */
+.action-card {
+    position: relative; /* CRÍTICO para que la lista se pegue al input */
+    overflow: visible; /* CRÍTICO para que la lista pueda salir de la tarjeta */
+}
 
 /* TESORERÍA PREVIEW */
 .t-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 1.1rem; }
@@ -104,3 +179,371 @@ body { background-color: var(--admin-bg); }
 .popup { background: white; padding: 25px; border-radius: 12px; width: 500px; max-width: 95%; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
 .modal-header-row { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
 .close-x { cursor: pointer; font-size: 1.5rem; }
+
+/* --- MODAL PERFIL DE INVERSOR --- */
+
+/* Sección Resumen Superior */
+.profile-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #eee;
+}
+
+.p-stat-box {
+    display: flex;
+    flex-direction: column;
+}
+.p-stat-label { font-size: 0.75rem; color: #666; margin-bottom: 5px; text-transform: uppercase; font-weight: 600; }
+.p-stat-val { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: var(--admin-accent); }
+
+/* Sección Lista de Carpetas */
+.admin-folders-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Tarjeta de Carpeta Admin */
+.admin-folder-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 15px;
+    background: white;
+    transition: box-shadow 0.2s;
+}
+.admin-folder-card:hover { box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+/* Header Carpeta: N° y Select Estado */
+.af-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.af-id { font-weight: 700; color: var(--admin-accent); font-size: 0.95rem; }
+
+/* Selector de Estado Estilizado */
+.status-select {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: white;
+}
+/* Colores dinámicos para el select */
+.status-select.activa { border-color: #2e7d32; color: #2e7d32; background: #f1f8e9; }
+.status-select.pendiente { border-color: #f57f17; color: #f57f17; background: #fff8e1; }
+.status-select.bloqueada { border-color: #c62828; color: #c62828; background: #ffebee; }
+.status-select.finalizada { border-color: #333; color: #333; background: #f5f5f5; }
+
+/* Grilla de Datos Carpeta */
+.af-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 20px;
+    margin-bottom: 15px;
+}
+.af-item label { display: block; font-size: 0.7rem; color: #888; margin-bottom: 2px; }
+.af-item span { font-size: 0.9rem; font-weight: 500; color: #333; }
+
+/* Botonera de Acciones */
+.af-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 10px;
+}
+
+.btn-icon-action {
+    background: none; border: 1px solid #ddd; border-radius: 6px;
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: 0.2s; color: #555;
+}
+.btn-icon-action:hover { background: #f0f0f0; color: #000; }
+.btn-icon-action.active-bell { color: #f57f17; border-color: #f57f17; background: #fff8e1; }
+
+.btn-reinvest {
+    background-color: var(--admin-accent); color: white; border: none;
+    padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+}
+.btn-reinvest:hover { opacity: 0.9; }
+
+/* --- ESTILOS DEL EDITOR DE NOTIFICACIONES --- */
+
+.admin-textarea {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    resize: vertical; /* Permite estirar solo hacia abajo */
+    font-family: inherit;
+    font-size: 0.95rem;
+    background-color: #f9f9f9;
+    transition: border-color 0.2s, background-color 0.2s;
+    outline: none;
+}
+
+.admin-textarea:focus {
+    border-color: var(--admin-accent);
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+}
+
+/* Ajuste para los botones del modal */
+.btn-admin-outline {
+    padding: 8px 16px; /* Un poco más chicos que los principales */
+}
+
+/* Agrega esto al final de tu CSS de Admin */
+
+/* Estilo para items de la lista de pagos Admin */
+.admin-payments-list {
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.payment-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fff;
+    transition: background 0.2s;
+}
+
+.payment-row:hover { background-color: #f9f9f9; }
+
+/* Checkbox personalizado */
+.payment-check-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.payment-check-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--admin-accent); /* Color corporativo */
+}
+
+.pay-date { font-weight: 600; color: #333; font-size: 0.95rem; }
+.pay-amount { font-family: var(--font-heading); font-weight: 700; color: var(--admin-accent); }
+.pay-status { font-size: 0.75rem; color: #888; margin-left: 10px; }
+
+/* Estado visual cuando está marcado */
+.payment-row.marked-paid {
+    background-color: #f0fdf4; /* Verde muy claro */
+    border-color: #bbf7d0;
+}
+.payment-row.marked-paid .pay-status { color: #16a34a; font-weight: bold; }
+
+/* Botón Ver Historial en la tarjeta de carpeta */
+.btn-history {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    color: #555;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.btn-history:hover { border-color: var(--admin-accent); color: var(--admin-accent); }
+
+/* --- ESTILOS MODERNOS FORMULARIO ALTA --- */
+
+.admin-form-body {
+    padding-top: 10px;
+}
+
+.icon-box-header {
+    background: #fdf2f8; /* Un toque de color suave */
+    width: 35px; height: 35px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+}
+
+/* Grupos de Formulario */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #555;
+    letter-spacing: 0.3px;
+}
+
+/* Inputs y Selects */
+.admin-input {
+    width: 100%;
+    padding: 12px 15px;
+    background-color: #f9fafb; /* Gris muy claro */
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #1f2937;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.admin-input:focus {
+    background-color: #ffffff;
+    border-color: var(--admin-accent); /* Tu color charcoal */
+    box-shadow: 0 0 0 3px rgba(52, 46, 46, 0.1); /* Resplandor suave */
+}
+
+.admin-input::placeholder {
+    color: #9ca3af;
+}
+
+/* Input con Icono ($) */
+.input-icon-wrapper {
+    position: relative;
+}
+.input-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.admin-input.has-icon {
+    padding-left: 30px; /* Espacio para el $ */
+}
+
+/* ID Preview Box (Estilo Tarjeta Digital) */
+.id-preview-container {
+    margin-top: 25px;
+    background: linear-gradient(145deg, #ffffff, #f3f4f6);
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.preview-label {
+    display: block;
+    font-size: 0.7rem;
+    color: #6b7280;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.id-display-box {
+    background-color: var(--admin-accent); /* Fondo oscuro corporativo */
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 6px;
+    display: inline-block;
+    font-family: 'Courier New', monospace; /* Fuente tipo código */
+    font-weight: 700;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+/* Footer Botones */
+.modal-footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Animación fade */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- AUTOCOMPLETE (PREDICTIVO) --- */
+.autocomplete-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    border: 1px solid #d4d4d4;
+    border-bottom: none;
+    border-top: none;
+    z-index: 99;
+    background-color: #fff;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.autocomplete-item {
+    padding: 10px;
+    cursor: pointer;
+    background-color: #fff;
+    border-bottom: 1px solid #d4d4d4;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+}
+
+.autocomplete-item:hover {
+    background-color: #e9e9e9;
+}
+
+.autocomplete-item strong {
+    color: var(--admin-accent);
+}
+
+/* Botón Nuevo en Perfil Usuario */
+.btn-profile-new {
+    background-color: #2e7d32; /* Verde */
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 15px; /* Separación del grid */
+}
+.btn-profile-new:hover { background-color: #1b5e20; }

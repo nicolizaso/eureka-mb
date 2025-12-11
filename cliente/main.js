@@ -286,11 +286,15 @@ function renderFilaInversion(s) {
 window.toggleNotificacion = (id) => { const box = document.getElementById(`notif-${id}`); if (box) box.classList.toggle('visible'); };
 
 // --- HELPER: MODAL DETALLE ---
+// --- MODAL DETALLE CLIENTE (ACTUALIZADO) ---
 function abrirModalDetalle(solicitud) {
     const popup = document.getElementById('popupOverlay');
     const pagos = calcularPagosSimples(solicitud);
     const totalCuotasReales = parseInt(solicitud.periodos);
     
+    // Obtenemos los pagos marcados por el admin
+    const realizados = solicitud.pagosRealizados || []; // Array de keys
+
     let htmlHeader = `
         <div class="modal-header-row">
             <div>
@@ -310,18 +314,21 @@ function abrirModalDetalle(solicitud) {
         const fechaCorta = `${mes}/${anio.slice(2)}`; 
         
         let textoCentro;
-        if (p.esCapital) {
-            textoCentro = "Devolución de Capital";
-        } else {
-            textoCentro = `Cuota ${index + 1} / ${totalCuotasReales}`;
-        }
+        if (p.esCapital) textoCentro = "Devolución de Capital";
+        else textoCentro = `Cuota ${index + 1} / ${totalCuotasReales}`;
 
+        // LÓGICA DE ESTADO (PRIORIDAD AL ADMIN)
         let claseCard = '';
-        if (p.key < hoyKey) {
-            claseCard = 'paid';
+        let esPagada = realizados.includes(p.key); // ¿Está en la lista del admin?
+
+        if (esPagada) {
+            claseCard = 'paid'; // Verde check
         } else if (p.key === hoyKey) {
             claseCard = 'current';
-            textoCentro = "Pago en Curso"; 
+            textoCentro = "Pago en Curso";
+        } else if (p.key < hoyKey) {
+            // Pasó la fecha y NO está pagada -> Pendiente/Atrasada (Visualmente pending por ahora)
+            claseCard = 'pending'; 
         } else {
             claseCard = 'pending';
         }
@@ -338,25 +345,16 @@ function abrirModalDetalle(solicitud) {
     htmlLista += `</div>`;
     let htmlFooter = `<button id="btnCerrarPopupInner" class="btn-primary" style="width:100%">Cerrar</button>`;
 
-    // Inyectamos HTML asegurando que la estructura Flex interna sea respetada
-    // IMPORTANTE: .popup-inner es quien tiene el padding
-    const popupEl = document.getElementById('popupOverlay');
-    popupEl.innerHTML = `
-        <div class="popup">
-            <div class="popup-inner">
-                ${htmlHeader}
-                ${htmlLista}
-                ${htmlFooter}
-            </div>
-        </div>
-    `;
+    // Render (asegura que popupOverlay esté vacío en HTML inicial o usa innerHTML)
+    const container = document.getElementById('popupOverlay');
+    container.innerHTML = `<div class="popup"><div class="popup-inner">${htmlHeader}${htmlLista}${htmlFooter}</div></div>`;
     
-    popupEl.classList.remove('hidden');
+    container.classList.remove('hidden');
     
     // Listeners del nuevo DOM
-    const popupInternal = popupEl.querySelector('.popup');
-    popupInternal.querySelector('#btnModalCloseX').addEventListener('click', () => popupEl.classList.add('hidden'));
-    popupInternal.querySelector('#btnCerrarPopupInner').addEventListener('click', () => popupEl.classList.add('hidden'));
+    const popupEl = container.querySelector('.popup');
+    popupEl.querySelector('#btnModalCloseX').addEventListener('click', () => container.classList.add('hidden'));
+    popupEl.querySelector('#btnCerrarPopupInner').addEventListener('click', () => container.classList.add('hidden'));
 
     setTimeout(() => {
         const tarjetaActual = popupEl.querySelector('.quota-card.current');

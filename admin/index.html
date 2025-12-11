@@ -4,16 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Console | MB Eureka</title>
-    
     <link rel="stylesheet" href="../assets/styles/main.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <nav class="navbar-admin">
-        <div class="brand">
-            MB Eureka <span class="badge-admin">ADMIN</span>
-        </div>
+        <div class="brand">MB Eureka <span class="badge-admin">ADMIN</span></div>
         <div class="nav-right">
             <span id="adminName" class="admin-user">Administrador</span>
             <button id="btnLogout" class="btn-logout-admin">Salir</button>
@@ -21,52 +18,32 @@
     </nav>
 
     <div class="container-admin">
-        
         <div class="dashboard-header">
             <h1>Panel de Control</h1>
             <p class="text-muted">Gestión integral de cartera e inversiones.</p>
         </div>
 
         <div class="admin-grid">
-            
             <div class="card admin-card action-card">
                 <div class="card-icon">🔍</div>
                 <h3>Gestión de Cartera</h3>
-                <p>Buscar clientes, editar estados, ver detalles y cargar novedades.</p>
-                
                 <div class="search-wrapper">
-                    <input type="text" id="inputBuscador" placeholder="Buscar por DNI, Nombre o Carpeta..." autocomplete="off">
-                    <button id="btnBuscar" class="btn-admin-primary">Buscar</button>
+                    <input type="text" id="inputBuscador" placeholder="🔍 Buscar Inversor por Nombre o DNI..." autocomplete="off" style="width: 100%;">
                 </div>
-                
                 <div id="listaResultados" class="results-list hidden"></div>
             </div>
 
             <div class="card admin-card">
                 <div class="card-icon">✨</div>
                 <h3>Nueva Inversión</h3>
-                <p>Dar de alta una nueva carpeta para un cliente existente o nuevo.</p>
                 <button id="btnNuevaInversion" class="btn-admin-outline full-width">Crear Carpeta</button>
             </div>
 
             <div class="card admin-card">
                 <div class="card-icon">💰</div>
                 <h3>Tesorería (Este Mes)</h3>
-                <p>Vencimientos y pagos pendientes de liquidación.</p>
-                <div class="treasury-preview">
-                    <div class="t-row">
-                        <span>A Pagar:</span>
-                        <span class="t-amount" id="kpiPagosMes">-</span>
-                    </div>
-                    <button id="btnVerTesoreria" class="btn-text">Ver detalle →</button>
                 </div>
-            </div>
-
         </div>
-
-        <div id="editorArea" class="editor-section hidden">
-            </div>
-
     </div>
 
     <div id="adminModal" class="overlay hidden">
@@ -76,6 +53,122 @@
                 <span id="closeModal" class="close-x">&times;</span>
             </div>
             <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <div id="modalNuevaInversion" class="overlay hidden">
+        <div class="popup" style="max-width: 650px;">
+            <div class="modal-header-row">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="icon-box-header">✨</div>
+                    <h3 style="margin:0;">Nueva Inversión</h3>
+                </div>
+                <span onclick="document.getElementById('modalNuevaInversion').classList.add('hidden')" class="close-x">&times;</span>
+            </div>
+            
+            <form id="formNuevaCarpeta" class="admin-form-body">
+                <div class="grid-form">
+                    <div class="form-group">
+                        <label class="admin-label">Nombre y Apellido</label>
+                        <div class="autocomplete-wrapper">
+                            <input type="text" id="newNombre" class="admin-input" required placeholder="Ej: Juan Perez" autocomplete="off">
+                            <div id="listaSugNombre" class="autocomplete-list hidden"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="admin-label">DNI</label>
+                        <div class="autocomplete-wrapper">
+                            <input type="text" id="newDni" class="admin-input" required placeholder="Sin puntos" autocomplete="off">
+                            <div id="listaSugDni" class="autocomplete-list hidden"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="admin-label">Capital Invertido (USD)</label>
+                        <div class="input-icon-wrapper">
+                            <span class="input-icon">$</span>
+                            <input type="number" id="newCapital" class="admin-input has-icon" required step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="admin-label">Tasa de Interés (%)</label>
+                        <input type="number" id="newTasa" class="admin-input" required step="0.1">
+                    </div>
+                    <div style="grid-column: span 2; display: flex; gap: 15px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="admin-label">Plazo (Meses)</label>
+                            <select id="newPlazoSelect" class="admin-input">
+                                <option value="12">12 Meses</option>
+                                <option value="18">18 Meses</option>
+                                <option value="24">24 Meses</option>
+                                <option value="otro" style="color:var(--admin-accent); font-weight:bold;">Personalizado...</option>
+                            </select>
+                        </div>
+                        <div id="divPlazoOtro" class="form-group" style="flex: 1; display: none;">
+                            <label class="admin-label">Especifique Meses</label>
+                            <input type="number" id="newPlazoInput" class="admin-input">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="admin-label">Unidad de Negocio</label>
+                        <select id="newUnidad" class="admin-input" required>
+                            </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="admin-label">Fecha de Inicio</label>
+                        <input type="date" id="newFecha" class="admin-input" required>
+                    </div>
+                </div>
+
+                <div class="id-preview-container">
+                    <small class="preview-label">ID DE CARPETA (PREVISUALIZACIÓN)</small>
+                    <div class="id-display-box">
+                        <span id="idDisplay" class="id-placeholder">SELECCIONE UNIDAD</span>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" onclick="document.getElementById('modalNuevaInversion').classList.add('hidden')" class="btn-admin-outline">Cancelar</button>
+                    <button type="submit" class="btn-admin-primary">Crear Carpeta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalNotificacion" class="overlay hidden">
+        <div class="popup" style="max-width: 500px;">
+            <div class="modal-header-row">
+                <h3>Mensaje para el Cliente</h3>
+                <span id="closeNotif" class="close-x">&times;</span>
+            </div>
+            <div style="padding-top: 10px;">
+                <textarea id="txtNotificacion" class="admin-textarea" rows="4"></textarea>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button id="btnCancelNotif" class="btn-admin-outline">Cancelar</button>
+                    <button id="btnSaveNotif" class="btn-admin-primary">Guardar Mensaje</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalPagosAdmin" class="overlay hidden">
+        <div class="popup" style="max-width: 600px;">
+            <div class="modal-header-row">
+                <div id="headerPagosInfo"></div>
+                <span id="closeModalPagos" class="close-x">&times;</span>
+            </div>
+            <div id="listaPagosAdmin" class="admin-payments-list"></div>
+            <div style="margin-top: 15px; text-align: right;">
+                <button onclick="document.getElementById('modalPagosAdmin').classList.add('hidden')" class="btn-admin-outline">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalFeedback" class="overlay hidden" style="z-index: 3000;">
+        <div class="popup" style="max-width: 400px; text-align: center; padding: 30px;">
+            <div id="fbIcon" style="font-size: 3rem; margin-bottom: 15px;">✅</div>
+            <h3 id="fbTitle" style="margin-bottom: 10px;">¡Éxito!</h3>
+            <p id="fbMessage" style="color: #666; margin-bottom: 25px;">Operación realizada.</p>
+            <button onclick="document.getElementById('modalFeedback').classList.add('hidden')" class="btn-admin-primary full-width">Aceptar</button>
         </div>
     </div>
 
