@@ -96,6 +96,7 @@ async function cargarBaseDeDatos() {
         });
 
         datosAgrupados = Object.values(mapa);
+        calcularTesoreriaDashboard();
         console.log("Datos actualizados correctamente.");
 
     } catch (e) {
@@ -564,21 +565,69 @@ function abrirModalPerfil(cliente) {
     listaMain.classList.add('hidden');
 }
 
-// --- 7. PAGOS ---
+// --- 7. PAGOS (MODIFICADO: Muestra "Cuota X/XX" en el listado) ---
 window.abrirHistorialPagos = (id) => {
-    const c = cacheSolicitudes.find(s=>s.id===id); if(!c) return;
+    const c = cacheSolicitudes.find(s => s.id === id);
+    if (!c) return;
+
     const modal = document.getElementById('modalPagosAdmin');
-    document.getElementById('headerPagosInfo').innerHTML=`<h3 style="margin:0">Gestión Pagos</h3><p style="margin:0; color:#666">Carpeta #${c.carpeta}</p>`;
-    const pagos = calcularPagosSimples(c); const realizados = c.pagosRealizados || [];
-    const lista = document.getElementById('listaPagosAdmin'); lista.innerHTML='';
-    pagos.forEach(p => {
+    document.getElementById('headerPagosInfo').innerHTML = `<h3 style="margin:0">Gestión Pagos</h3><p style="margin:0; color:#666">Carpeta #${c.carpeta}</p>`;
+    
+    const pagos = calcularPagosSimples(c);
+    const realizados = c.pagosRealizados || [];
+    const lista = document.getElementById('listaPagosAdmin');
+    
+    // Obtener mes actual para el borde negro
+    const hoyKey = new Date().toISOString().slice(0, 7);
+    const totalCuotas = parseInt(c.periodos); // Total para mostrar "/12"
+
+    lista.innerHTML = '';
+    
+    // Agregamos 'index' al forEach para saber el número de cuota
+    pagos.forEach((p, index) => {
         const done = realizados.includes(p.key);
-        const [a,m] = p.key.split('-'); const lbl = p.esCapital ? "Devolución" : "Cuota";
+        const [a, m] = p.key.split('-');
+        
+        // LÓGICA DE TEXTO CUOTA
+        let labelCuota;
+        if (p.esCapital) {
+            labelCuota = "Devolución Capital";
+        } else {
+            // El índice arranca en 0, así que sumamos 1.
+            // Ejemplo: index 0 -> Cuota 1 / 12
+            labelCuota = `Cuota ${index + 1} / ${totalCuotas}`;
+        }
+
+        // Lógica visual (Mes actual y Pagado)
+        const esMesActual = p.key === hoyKey;
+        const claseCurrent = esMesActual ? 'current-month' : '';
+        const clasePagada = done ? 'marked-paid' : '';
+
         const row = document.createElement('div');
-        row.className = `payment-row ${done?'marked-paid':''}`;
-        row.innerHTML = `<div class="payment-info"><div style="display:flex; gap:10px;"><span class="pay-date">${m}/${a.slice(2)}</span><span style="font-size:0.8rem; color:#666">${lbl}</span></div><div><span class="pay-amount">${formatearMoneda(p.monto)}</span><span class="pay-status">${done?'ABONADA':'PENDIENTE'}</span></div></div><label class="payment-check-group"><input type="checkbox" ${done?'checked':''} onchange="togglePago('${c.id}', '${p.key}', this)"></label>`;
+        row.className = `payment-row ${clasePagada} ${claseCurrent}`;
+        
+        row.innerHTML = `
+            <div class="payment-info">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <span class="pay-date">${m}/${a.slice(2)}</span>
+                    <span style="font-size:0.8rem; color:#666; font-weight:600;">${labelCuota}</span>
+                </div>
+                <div>
+                    <span class="pay-amount">${formatearMoneda(p.monto)}</span>
+                    <span class="pay-status">${done ? 'ABONADA' : 'PENDIENTE'}</span>
+                </div>
+            </div>
+            <label class="payment-check-group">
+                <input type="checkbox" ${done ? 'checked' : ''} onchange="togglePago('${c.id}', '${p.key}', this)">
+            </label>
+        `;
         lista.appendChild(row);
+
+        if(esMesActual) {
+            setTimeout(() => row.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+        }
     });
+    
     modal.classList.remove('hidden');
 };
 
@@ -670,6 +719,124 @@ function calcularInfoCuota(s) {
     const pagoObj = pagos.find(p => p.key === keyAprox) || pagos[actual-1] || {monto:0};
     return `${actual}/${total} • ${formatearMoneda(pagoObj.monto)}`;
 }
+
+// --- LÓGICA DEL MODAL TESORERÍA (DETALLE MENSUAL) ---
+// --- TESORERÍA CON BUSCADOR ---
+let itemsTesoreriaCache = []; // Variable para guardar la lista completa
+
+function calcularTesoreriaDashboard() {
+    const hoyKey = new Date().toISOString().slice(0, 7);
+    let totalMes = 0;
+    cacheSolicitudes.forEach(c => {
+        if ((c.estado || 'Activa') === 'Activa') {
+            const pagos = calcularPagosSimples(c);
+            const pago = pagos.find(p => p.key === hoyKey);
+            if (pago) totalMes += pago.monto;
+        }
+    });
+    const kpi = document.getElementById('kpiTesoreriaMes');
+    if (kpi) kpi.textContent = formatearMoneda(totalMes);
+}
+
+// 1. ABRIR Y CARGAR DATOS
+document.getElementById('btnAbrirTesoreria').addEventListener('click', () => {
+    const hoyKey = new Date().toISOString().slice(0, 7);
+    const totalHeader = document.getElementById('totalTesoreriaModal');
+    
+    // Limpiar input filtro
+    const inputFiltro = document.getElementById('filtroTesoreria');
+    if(inputFiltro) inputFiltro.value = '';
+
+    let totalLiquidar = 0;
+    itemsTesoreriaCache = []; // Reiniciamos caché
+
+    cacheSolicitudes.forEach(c => {
+        if ((c.estado || 'Activa') === 'Activa') {
+            const pagos = calcularPagosSimples(c);
+            const pagoDelMes = pagos.find(p => p.key === hoyKey);
+            if (pagoDelMes) {
+                totalLiquidar += pagoDelMes.monto;
+                itemsTesoreriaCache.push({ folder: c, pago: pagoDelMes });
+            }
+        }
+    });
+
+    if(totalHeader) totalHeader.textContent = formatearMoneda(totalLiquidar);
+    
+    // Ordenar alfabéticamente
+    itemsTesoreriaCache.sort((a, b) => a.folder.nombre.localeCompare(b.folder.nombre));
+    
+    // Renderizar todo
+    renderizarListaTesoreria(itemsTesoreriaCache);
+    document.getElementById('modalTesoreria').classList.remove('hidden');
+    
+    // Foco en el buscador
+    setTimeout(() => inputFiltro.focus(), 100);
+});
+
+// 2. ESCUCHAR FILTRO (BÚSQUEDA)
+document.getElementById('filtroTesoreria')?.addEventListener('input', (e) => {
+    const texto = e.target.value.toLowerCase();
+    
+    if (texto.length === 0) {
+        renderizarListaTesoreria(itemsTesoreriaCache); // Mostrar todo
+        return;
+    }
+
+    const filtrados = itemsTesoreriaCache.filter(item => 
+        item.folder.nombre.toLowerCase().includes(texto) || 
+        item.folder.carpeta.toLowerCase().includes(texto)
+    );
+    
+    renderizarListaTesoreria(filtrados);
+});
+
+// 3. FUNCIÓN DE RENDERIZADO (SEPARADA)
+function renderizarListaTesoreria(lista) {
+    const contenedor = document.getElementById('listaTesoreria');
+    contenedor.innerHTML = '';
+
+    if (lista.length === 0) {
+        contenedor.innerHTML = '<div style="padding:30px; text-align:center; color:#999; font-style:italic;">No se encontraron pagos.</div>';
+        return;
+    }
+
+    lista.forEach(item => {
+        const s = item.folder;
+        const p = item.pago;
+        const realizados = s.pagosRealizados || [];
+        const done = realizados.includes(p.key);
+        
+        const labelTipo = p.esCapital ? "Devolución de Capital" : "Renta Mensual";
+        const rowClass = done ? 'marked-paid' : '';
+        const statusText = done ? 'ABONADA' : 'PENDIENTE';
+
+        const row = document.createElement('div');
+        row.className = `payment-row ${rowClass}`;
+        
+        row.innerHTML = `
+            <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="font-weight:700; color:var(--admin-accent); font-size:1rem;">${s.nombre}</span>
+                    <span style="font-size:0.75rem; background:#eee; padding:2px 6px; border-radius:4px; color:#555;">#${s.carpeta}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.85rem; color:#666;">${labelTipo}</span>
+                    <div style="text-align:right; margin-right:15px;">
+                        <span class="pay-amount" style="font-size:1rem;">${formatearMoneda(p.monto)}</span>
+                        <span class="pay-status">${statusText}</span>
+                    </div>
+                </div>
+            </div>
+            <label class="payment-check-group" style="padding-left:15px; border-left:1px solid #eee;">
+                <input type="checkbox" ${done ? 'checked' : ''} onchange="togglePago('${s.id}', '${p.key}', this)">
+            </label>
+        `;
+        contenedor.appendChild(row);
+    });
+}
+
+    modal.classList.remove('hidden');
 
 window.cambiarEstado = async (id, sel) => { try { await updateDoc(doc(db,"solicitudes",id), {estado:sel.value}); sel.className = `status-select ${sel.value.toLowerCase()}`; } catch(e) { mostrarFeedback("Error", "No se cambió el estado", true); } };
 window.editarNotificacion = (id, txt) => { idCarpetaEditando = id; document.getElementById('txtNotificacion').value = (txt && txt!=='undefined') ? txt : ''; document.getElementById('modalNotificacion').classList.remove('hidden'); };

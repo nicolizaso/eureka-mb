@@ -47,7 +47,11 @@
             <div class="card admin-card">
                 <div class="card-icon">💰</div>
                 <h3>Tesorería (Este Mes)</h3>
-                <button class="btn-text" style="margin-top:auto;">Ir a Tesorería →</button>
+                <div class="treasury-preview">
+                    <span style="font-size:0.9rem; color:#666; display:block;">Total a Pagar:</span>
+                    <span id="kpiTesoreriaMes" class="t-amount-big">-</span>
+                </div>
+                <button id="btnAbrirTesoreria" class="btn-text" style="margin-top:auto;">Ver Detalle Mensual →</button>
             </div>
         </div>
     </div>
@@ -220,6 +224,27 @@
         </div>
     </div>
 
+    <div id="modalTesoreria" class="overlay hidden">
+        <div class="popup" style="max-width: 800px;">
+            <div class="modal-header-row">
+                <h3>Tesorería del Mes</h3>
+                <span onclick="document.getElementById('modalTesoreria').classList.add('hidden')" class="close-x">&times;</span>
+            </div>
+            
+            <div style="padding: 0 25px 15px 25px; background:#f9f9f9; border-bottom:1px solid #eee;">
+                <p style="margin:0 0 10px 0; font-size:0.9rem; color:#666;">Total a liquidar este mes: <strong id="totalTesoreriaModal" style="color:var(--admin-accent); font-size:1.1rem;">-</strong></p>
+                
+                <input type="text" id="filtroTesoreria" class="admin-input" placeholder="🔍 Filtrar por cliente..." style="padding:8px; font-size:0.9rem;">
+            </div>
+
+            <div id="listaTesoreria" class="admin-payments-list" style="padding:20px; max-height: 500px;">
+                </div>
+            
+            <div style="margin-top: 15px; text-align: right; padding: 0 25px 20px 25px;">
+                <button onclick="document.getElementById('modalTesoreria').classList.add('hidden')" class="btn-admin-outline">Cerrar</button>
+            </div>
+        </div>
+    </div>
     <script type="module" src="main.js"></script>
 </body>
 </html>

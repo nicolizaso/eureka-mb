@@ -167,10 +167,29 @@ body { background-color: var(--admin-bg); }
     overflow: visible; /* CRÍTICO para que la lista pueda salir de la tarjeta */
 }
 
-/* TESORERÍA PREVIEW */
-.t-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 1.1rem; }
-.t-amount { font-weight: 700; color: var(--admin-accent); }
+/* --- TESORERÍA PREVIEW (MEJORADO) --- */
 
+.treasury-preview {
+    margin-top: 20px;
+    margin-bottom: 25px;
+    text-align: center; /* Centramos para darle importancia */
+    padding: 10px;
+    border-radius: 8px;
+    background: linear-gradient(to bottom, #ffffff, #fafafa); /* Fondo muy sutil */
+    border: 1px solid #f0f0f0;
+}
+
+.t-amount-big {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 2.5rem; /* Mucho más grande (aprox 50px) */
+    font-weight: 800;  /* Extra Negrita */
+    color: #2e7d32;    /* Verde Financiero */
+    letter-spacing: -1.5px; /* Estilo moderno y compacto */
+    display: block;
+    line-height: 1.1;
+    margin-top: 5px;
+    text-shadow: 0 4px 10px rgba(46, 125, 50, 0.15); /* Sombra suave verde para resaltar */
+}
 /* UTILIDADES */
 .hidden { display: none !important; }
 
@@ -626,4 +645,28 @@ body { background-color: var(--admin-bg); }
     color: #2e7d32 !important; /* Verde fuerte */
     font-style: italic;
     font-weight: 700;
+}
+
+/* --- ESTILO CUOTA ACTUAL (En Historial) --- */
+.payment-row.current-month {
+    border: 2px solid #222 !important; /* Borde Negro */
+    background-color: #fff;
+    position: relative;
+    z-index: 5;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Sombra para resaltar */
+}
+
+/* Etiqueta opcional "Mes Actual" */
+.payment-row.current-month::after {
+    content: "MES ACTUAL";
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    background: #222;
+    color: #fff;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
