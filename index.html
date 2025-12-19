@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MB Eureka | Inversiones en Economía Real</title>
+    
+    <title>MB Eureka | Holding de Inversiones Operativo en Economía Real</title>
+    <meta name="description" content="Invertí en economía real con MB Eureka. Gestionamos activos en FulFillment, Real Estate, Oro y Agronegocios. Rentabilidad sólida y gestión operativa transparente.">
+    <meta name="keywords" content="inversiones, holding operativo, dropshipping, real estate, campo, rentabilidad, economia real">
     
     <link rel="stylesheet" href="assets/styles/main.css">
 </head>
@@ -12,11 +15,11 @@
     <header>
         <div class="container">
             <div class="logo">
-                <img src="assets/logo.png" alt="MB Eureka" style="height: 40px;"> 
-                </div>
+                <img src="assets/logo.png" alt="MB Eureka Inversiones" style="height: 40px;"> 
+            </div>
             <nav class="nav-links">
-                <a href="#modelos">Modelos de Inversión</a>
-                <a href="#nosotros">Nosotros</a>
+                <a href="#modelos">Unidades de Negocio</a>
+                <a href="#nosotros">La Empresa</a>
                 <a href="login.html" class="btn btn-outline">Acceso Clientes</a>
             </nav>
         </div>
@@ -24,12 +27,14 @@
 
     <section class="hero">
         <div class="container">
-            <h1>Rentabiliza tu capital en la <br><span style="color: var(--accent);">Economía Real</span></h1>
-            <p>Accede a oportunidades de inversión diversificadas: Dropshipping, Real Estate y Franquicias con gestión transparente.</p>
+            <h1>
+                Transformamos capital en <br>
+                <span style="color: var(--accent);">Activos Productivos Reales</span>
+            </h1>
             
-            <div style="display: flex; gap: 15px; justify-content: center;">
-                <a href="login.html" class="btn btn-primary">Crear Cuenta</a>
-                <a href="#contacto" class="btn btn-outline">Contactar Asesor</a>
+            <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 30px;">
+                <a href="login.html" class="btn btn-primary">Comenzar a Invertir</a>
+                <a href="#modelos" class="btn btn-outline">Ver Unidades de Negocio</a>
             </div>
 
             <div id="ticker-dolar">
@@ -42,37 +47,65 @@
         <div class="container">
             <h2>Nuestras Unidades de Negocio</h2>
             
-            <div class="grid-inversiones">
-                <article>
-                    <h3>Dropshipping</h3>
-                    <p>Participación en operaciones de comercio electrónico global con alta rotación.</p>
-                </article>
-
-                <article>
-                    <h3>Real Estate</h3>
-                    <p>Inversiones respaldadas por activos inmobiliarios y rentas de alquiler.</p>
-                </article>
-
-                <article>
-                    <h3>Parking</h3>
-                    <p>Rentabilidad estable a través de la gestión y explotación de espacios.</p>
-                </article>
-                 <article>
-                    <h3>Franquicias</h3>
-                    <p>Inversión en modelos de negocio probados y escalables.</p>
-                </article>
-            </div>
+            <div id="contenedorUnidades" class="grid-inversiones"></div>
         </div>
     </section>
 
-    <footer>
-        <div class="container" style="text-align: center;">
-            <p>&copy; 2024 MB Eureka. Todos los derechos reservados.</p>
-            <p style="font-size: 0.8rem; margin-top: 10px; opacity: 0.7;">
-                Desarrollado con seguridad y transparencia.
+    <section id="nosotros" style="background-color: var(--white); padding: 80px 0;">
+        <div class="container" style="text-align: center; max-width: 800px;">
+            <h2 style="margin-bottom: 20px;">Gestión Activa, Rentabilidad Real</h2>
+
+            <p>
+                Somos un <strong>Holding de Inversiones Operativo</strong>. No solo invertimos, 
+                <strong>gestionamos y operamos</strong> negocios en E-Commerce, Real Estate, 
+                Agro y Finanzas para garantizar rentabilidad y minimizar riesgos de mercado.
             </p>
+
+            <p style="color: var(--text-muted); line-height: 1.6;">
+                A diferencia de los fondos tradicionales, en <strong>MB Eureka</strong> nos involucramos en la operación diaria. 
+                Desde la importación y logística en FulFillment hasta la renovación de propiedades en Real Estate. 
+                Nuestra estructura operativa es la garantía de tu capital.
+            </p>
+        </div>
+    </section>
+
+    <footer style="background-color: var(--primary); color: #fff; padding: 60px 0 30px;">
+        <div class="container">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px; text-align: left; margin-bottom: 40px;">
+                
+                <div>
+                    <img src="assets/logo.png" alt="MB Eureka" style="height: 30px; filter: brightness(0) invert(1); margin-bottom: 15px;">
+                    <p style="font-size: 0.9rem; color: #ccc; line-height: 1.6;">
+                        Holding de Inversiones Operativo.<br>
+                        Gestión de activos reales y rentabilidad transparente.
+                    </p>
+                </div>
+
+                <div>
+                    <h4 style="color: #fff; margin-bottom: 15px; font-size: 1rem;">Unidades de Negocio</h4>
+                    <ul style="list-style: none; padding: 0; font-size: 0.9rem; line-height: 2;">
+                        <li><a href="detalle.html?id=oro" style="color: #ccc;">Eternity (Oro)</a></li>
+                        <li><a href="detalle.html?id=dropshipping" style="color: #ccc;">Smart Fulfillment</a></li>
+                        <li><a href="detalle.html?id=realestate" style="color: #ccc;">Real Estate</a></li>
+                        <li><a href="detalle.html?id=agro" style="color: #ccc;">Pool de Siembra</a></li>
+                        <li><a href="detalle.html?id=financiera" style="color: #ccc;">Mesa Financiera</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 style="color: #fff; margin-bottom: 15px; font-size: 1rem;">Contacto</h4>
+                    <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 10px;">📍 Buenos Aires, Argentina</p>
+                    <p style="font-size: 0.9rem; color: #ccc;">✉️ contacto@mbeureka.com</p>
+                    <a href="login.html" class="btn btn-outline" style="margin-top: 15px; display: inline-block; color: white; border-color: white;">Area de Clientes</a>
+                </div>
+            </div>
+
+            <div style="border-top: 1px solid #444; padding-top: 20px; text-align: center;">
+                <p style="font-size: 0.8rem; color: #888;">&copy; 2024 MB Eureka. Todos los derechos reservados.</p>
+            </div>
         </div>
     </footer>
 
-    </body>
+    <script src="assets/js/index.js"></script>
+</body>
 </html>
