@@ -77,7 +77,7 @@ const unidadesNegocio = [
 document.addEventListener('DOMContentLoaded', () => {
     // Buscamos el contenedor en index.html
     const contenedor = document.getElementById('contenedorUnidades');
-    
+
     if (!contenedor) {
         console.error("No se encontró el contenedor #contenedorUnidades en el HTML.");
         return;
@@ -85,15 +85,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let htmlContent = '';
 
-    unidadesNegocio.forEach(un => {
+    unidadesNegocio.forEach((un, index) => {
         // Fallback visual si no hay imagen (usa el icono)
-        const imagenHtml = un.imagen 
+        const imagenHtml = un.imagen
             ? `<div class="card-img" style="background-image: url('${un.imagen}');"></div>`
             : `<div class="card-icon-placeholder">${un.icono}</div>`;
 
-        // Generamos la tarjeta
+        // Generamos la tarjeta con animación stagger
         htmlContent += `
-            <article class="card-un">
+            <article class="card-un" style="animation-delay: ${index * 0.1}s">
                 ${imagenHtml}
                 <div class="card-content">
                     <h3>${un.titulo}</h3>
@@ -105,4 +105,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     contenedor.innerHTML = htmlContent;
+
+    // Intersection Observer para animaciones al entrar en viewport
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, {
+        threshold: 0.1
+    });
+
+    document.querySelectorAll('.card-un').forEach(card => {
+        observer.observe(card);
+    });
+
+    // Efecto de scroll en el header
+    const header = document.querySelector('header');
+    let lastScroll = 0;
+
+    window.addEventListener('scroll', () => {
+        const currentScroll = window.pageYOffset;
+
+        if (currentScroll > 50) {
+            header.classList.add('scrolled');
+        } else {
+            header.classList.remove('scrolled');
+        }
+
+        lastScroll = currentScroll;
+    });
+
+    // Smooth scroll para enlaces internos
+    const smoothScrollLinks = document.querySelectorAll('a[href^="#"]');
+    smoothScrollLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            const href = link.getAttribute('href');
+            if (href !== '#' && href.length > 1) {
+                e.preventDefault();
+                const target = document.querySelector(href);
+                if (target) {
+                    const offsetTop = target.offsetTop - 80;
+                    window.scrollTo({
+                        top: offsetTop,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        });
+    });
 });

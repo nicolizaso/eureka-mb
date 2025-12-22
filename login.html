@@ -1,50 +1,65 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Acceso | MB Eureka</title>
-  
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Acceso | MB Eureka</title>
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
     <link rel="stylesheet" href="assets/styles/main.css">
-    
     <link rel="stylesheet" href="assets/styles/login.css">
-  
 </head>
-<body>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); position: relative; overflow: hidden;">
 
-<div class="contenedor" id="contenedorLogin">
-  <h2 id="tituloHeader">Bienvenido/a</h2>
-  
-  <div class="inicio-opciones" id="opcionesInicio">
-    <button id="btnMostrarLogin" type="button">Iniciar Sesión</button>
-    <button id="btnMostrarRegistro" type="button">Registrarse</button>
-  </div>
+    <div style="position: absolute; top: -20%; right: -10%; width: 500px; height: 500px; background: radial-gradient(circle, rgba(46, 125, 50, 0.08) 0%, transparent 70%); border-radius: 50%; animation: float 20s ease-in-out infinite;"></div>
+    <div style="position: absolute; bottom: -20%; left: -10%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(26, 26, 46, 0.05) 0%, transparent 70%); border-radius: 50%; animation: float 15s ease-in-out infinite reverse;"></div>
 
-  <p id="btnVolver" class="atras hidden">⬅ Atrás</p>
+    <div class="contenedor" id="contenedorLogin">
+        <h2 id="tituloHeader">Bienvenido/a</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 30px; font-size: 0.95rem;">Accede a tu panel de inversiones</p>
 
-  <form id="loginForm" class="hidden">
-    <input type="text" id="dniLogin" placeholder="DNI o Correo electrónico" required autocomplete="username" />
-    <input type="password" id="passwordLogin" placeholder="Contraseña" required autocomplete="current-password" />
-    <button type="submit">Ingresar</button>
-    <p class="atras">
-      <a href="/recuperar" style="text-decoration: underline; color: inherit;">¿Olvidaste tu contraseña?</a>
-    </p>
-  </form>
+        <div class="inicio-opciones" id="opcionesInicio">
+            <button id="btnMostrarLogin" type="button"><span>Iniciar Sesión</span></button>
+            <button id="btnMostrarRegistro" type="button"><span>Registrarse</span></button>
+        </div>
 
-  <form id="registerForm" class="hidden">
-    <input type="text" id="nombreRegister" placeholder="Nombre completo" required autocomplete="name" />
-    <input type="text" id="dniRegister" placeholder="DNI" required />
-    <input type="email" id="mailRegister" placeholder="Correo electrónico" required autocomplete="email" />
-    <input type="tel" id="telefonoRegister" placeholder="Teléfono" required autocomplete="tel" />
-    <input type="password" id="passwordRegister" placeholder="Contraseña" required autocomplete="new-password" />
-    <button type="submit">Registrarse</button>
-  </form>
+        <p id="btnVolver" class="atras hidden">Atrás</p>
 
-  <div id="popupMensaje" class="hidden"></div>
+        <form id="loginForm" class="hidden">
+            <label for="dniLogin">Usuario</label>
+            <input type="text" id="dniLogin" placeholder="DNI o Correo electrónico" required autocomplete="username" />
 
-</div>
+            <label for="passwordLogin">Contraseña</label>
+            <input type="password" id="passwordLogin" placeholder="Ingresa tu contraseña" required autocomplete="current-password" />
 
-<script type="module" src="assets/js/login.js"></script>
+            <button type="submit">Ingresar</button>
 
+            <p class="atras">
+                <a href="/recuperar" style="text-decoration: underline; color: inherit;">¿Olvidaste tu contraseña?</a>
+            </p>
+        </form>
+
+        <form id="registerForm" class="hidden">
+            <label for="nombreRegister">Nombre completo</label>
+            <input type="text" id="nombreRegister" placeholder="Juan Pérez" required autocomplete="name" />
+
+            <label for="dniRegister">DNI</label>
+            <input type="text" id="dniRegister" placeholder="12345678" required />
+
+            <label for="mailRegister">Correo electrónico</label>
+            <input type="email" id="mailRegister" placeholder="tu@email.com" required autocomplete="email" />
+
+            <label for="telefonoRegister">Teléfono</label>
+            <input type="tel" id="telefonoRegister" placeholder="+54 9 11 1234-5678" required autocomplete="tel" />
+
+            <label for="passwordRegister">Contraseña</label>
+            <input type="password" id="passwordRegister" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" />
+
+            <button type="submit">Registrarse</button>
+        </form>
+
+        <div id="popupMensaje" class="hidden"></div>
+    </div>
+
+    <script type="module" src="assets/js/login.js"></script>
 </body>
 </html>
