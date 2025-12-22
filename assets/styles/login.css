@@ -4,8 +4,62 @@
     padding: 0;
 }
 
+/* Login page specific styles */
+.login-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+body.theme-dark .login-page {
+    background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
+}
+
+/* Background decorations */
+.login-bg-decoration {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.login-bg-decoration-1 {
+    top: -20%;
+    right: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, transparent 70%);
+    animation: float 20s ease-in-out infinite;
+}
+
+body.theme-dark .login-bg-decoration-1 {
+    background: radial-gradient(circle, rgba(245, 200, 66, 0.15) 0%, transparent 70%);
+}
+
+.login-bg-decoration-2 {
+    bottom: -20%;
+    left: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(26, 26, 46, 0.08) 0%, transparent 70%);
+    animation: float 15s ease-in-out infinite reverse;
+}
+
+body.theme-dark .login-bg-decoration-2 {
+    background: radial-gradient(circle, rgba(245, 200, 66, 0.1) 0%, transparent 70%);
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    33% { transform: translate(40px, -40px) rotate(120deg); }
+    66% { transform: translate(-30px, 30px) rotate(240deg); }
+}
+
 .contenedor {
-    background: white;
+    background: var(--card-bg);
     width: 100%;
     max-width: 450px;
     padding: 50px 40px;
@@ -15,6 +69,11 @@
     position: relative;
     border: 1px solid var(--border);
     animation: fadeInScale 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+body.theme-dark .contenedor {
+    background: var(--bg-elevated);
+    border-color: var(--border);
 }
 
 @keyframes fadeInScale {
@@ -46,7 +105,7 @@
 }
 
 .inicio-opciones button {
-    background: white;
+    background: var(--bg-elevated);
     color: var(--primary);
     border: 2px solid var(--primary);
     padding: 16px;
@@ -58,6 +117,12 @@
     transition: var(--transition);
     position: relative;
     overflow: hidden;
+}
+
+body.theme-dark .inicio-opciones button {
+    background: var(--bg-secondary);
+    color: var(--text-main);
+    border-color: var(--accent);
 }
 
 .inicio-opciones button::before {
@@ -74,6 +139,10 @@
     z-index: 0;
 }
 
+body.theme-dark .inicio-opciones button::before {
+    background: var(--accent);
+}
+
 .inicio-opciones button:hover::before {
     width: 400px;
     height: 400px;
@@ -84,6 +153,10 @@
     transform: translateY(-3px);
     box-shadow: var(--shadow-md);
     border-color: var(--primary);
+}
+
+body.theme-dark .inicio-opciones button:hover {
+    border-color: var(--accent);
 }
 
 .inicio-opciones button span {
@@ -107,12 +180,18 @@ input {
     outline: none;
     transition: var(--transition);
     width: 100%;
-    background: white;
+    background: var(--bg-elevated);
+    color: var(--text-main);
+}
+
+body.theme-dark input {
+    background: var(--bg-secondary);
+    border-color: var(--border);
 }
 
 input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-light);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 input::placeholder {
@@ -121,6 +200,28 @@ input::placeholder {
 
 input:hover {
     border-color: var(--text-muted);
+}
+
+button[type="submit"] {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+    color: white;
+    border: none;
+    padding: 16px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    border-radius: var(--radius);
+    cursor: pointer;
+    margin-top: 10px;
+    transition: var(--transition);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+}
+
+body.theme-dark button[type="submit"] {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+    color: var(--primary);
 }
 
 button[type="submit"] {
@@ -212,7 +313,7 @@ p.atras {
 
 h2 {
     font-family: var(--font-heading);
-    color: var(--primary);
+    color: var(--text-main);
     font-size: 1.8rem;
     margin-bottom: 10px;
     text-align: center;

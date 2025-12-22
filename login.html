@@ -8,10 +8,17 @@
     <link rel="stylesheet" href="assets/styles/main.css">
     <link rel="stylesheet" href="assets/styles/login.css">
 </head>
-<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); position: relative; overflow: hidden;">
+<body class="login-page">
+    <script>
+        // Apply theme immediately to prevent flicker
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        if (savedTheme === 'dark') {
+            document.body.classList.add('theme-dark');
+        }
+    </script>
 
-    <div style="position: absolute; top: -20%; right: -10%; width: 500px; height: 500px; background: radial-gradient(circle, rgba(46, 125, 50, 0.08) 0%, transparent 70%); border-radius: 50%; animation: float 20s ease-in-out infinite;"></div>
-    <div style="position: absolute; bottom: -20%; left: -10%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(26, 26, 46, 0.05) 0%, transparent 70%); border-radius: 50%; animation: float 15s ease-in-out infinite reverse;"></div>
+    <div class="login-bg-decoration login-bg-decoration-1"></div>
+    <div class="login-bg-decoration login-bg-decoration-2"></div>
 
     <div class="contenedor" id="contenedorLogin">
         <h2 id="tituloHeader">Bienvenido/a</h2>

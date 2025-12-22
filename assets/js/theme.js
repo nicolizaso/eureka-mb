@@ -12,6 +12,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         initThemeToggle();
         initMobileMenu();
+        updateLogo(); // Set correct logo on page load
     });
 
     function initThemeToggle() {
@@ -40,6 +41,7 @@
             }
             localStorage.setItem('theme', theme);
             updateThemeButtons();
+            updateLogo(); // Update logo when theme changes
         }
 
         function updateThemeButtons() {
@@ -51,6 +53,28 @@
                 darkBtn.classList.toggle('active', isDark);
             }
         }
+    }
+
+    function updateLogo() {
+        const isDark = document.body.classList.contains('theme-dark');
+        const logoImgs = document.querySelectorAll('.logo img, .navbar-brand img, header img[alt*="Eureka"], header img[alt*="MB"]');
+
+        logoImgs.forEach(logoImg => {
+            if (logoImg) {
+                const currentSrc = logoImg.getAttribute('src');
+                // Determine the correct path based on current location
+                let basePath = 'assets/img/';
+                if (currentSrc && currentSrc.includes('../assets')) {
+                    basePath = '../assets/img/';
+                } else if (currentSrc && currentSrc.startsWith('assets/')) {
+                    basePath = 'assets/img/';
+                } else if (currentSrc && currentSrc.startsWith('../assets/')) {
+                    basePath = '../assets/img/';
+                }
+
+                logoImg.src = isDark ? basePath + 'logo-blanco.png' : basePath + 'logo-negro.png';
+            }
+        });
     }
 
     function initMobileMenu() {

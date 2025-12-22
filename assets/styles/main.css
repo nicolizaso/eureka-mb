@@ -1,85 +1,117 @@
+/*
+ * COLOR SCHEME: Monochromatic Gold/Amber (Premium Wealth)
+ *
+ * Rationale: This palette represents tangible wealth and real assets, perfectly aligned
+ * with MB Eureka's focus on gold-backed investments, real estate, and agriculture.
+ * The warm gold and amber tones convey luxury, stability, and old-money elegance,
+ * while the neutral charcoal and off-white backgrounds provide a sophisticated,
+ * premium aesthetic suitable for high-net-worth investors.
+ *
+ * No blue tones are used, eliminating the previous blue+gold combination.
+ */
+
 /* --- VARIABLES & RESET --- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap');
 
 :root {
-    --primary: #0f172a;
-    --primary-hover: #020617;
-    --primary-light: #1e293b;
+    /* Primary: Deep charcoal for text and dark elements */
+    --primary: #1a1612;
+    --primary-hover: #0d0a08;
+    --primary-light: #2d2419;
 
+    /* Accent: Rich gold and amber tones */
     --accent: #d4af37;
-    --accent-light: #fef3c7;
+    --accent-light: #f5e6c8;
     --accent-hover: #b8941f;
     --accent-dark: #9a7b1a;
+    --accent-soft: #fef8e7;
 
-    --secondary: #334155;
-    --secondary-light: #475569;
+    /* Secondary: Warm bronze and beige */
+    --secondary: #8b6f47;
+    --secondary-light: #a68a5c;
 
-    --danger: #dc2626;
-    --success: #059669;
-    --warning: #f59e0b;
+    /* Status colors */
+    --danger: #c53030;
+    --success: #38a169;
+    --warning: #dd6b20;
 
-    --bg: #f8fafc;
-    --bg-secondary: #f1f5f9;
-    --bg-elevated: #ffffff;
+    /* Backgrounds: Darker tones for better contrast in light mode */
+    --bg: #e8e8ea;
+    --bg-secondary: #d8d8db;
+    --bg-elevated: #f0f0f2;
+    --card-bg: #ebebed;
     --white: #ffffff;
-    --border: #e2e8f0;
-    --border-light: #f1f5f9;
+    --border: #d0cdc8;
+    --border-light: #dbd8d3;
 
-    --text-main: #0f172a;
-    --text-secondary: #334155;
-    --text-muted: #64748b;
-    --text-light: #94a3b8;
+    /* Text: Charcoal to warm gray */
+    --text-main: #1a1612;
+    --text-secondary: #4a3f2f;
+    --text-muted: #6b5d4f;
+    --text-light: #8b7d6f;
 
+    /* Typography */
     --font-heading: 'Playfair Display', serif;
     --font-body: 'Inter', sans-serif;
 
-    --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08);
-    --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.12);
-    --shadow-lg: 0 12px 24px -4px rgba(15, 23, 42, 0.16);
-    --shadow-xl: 0 20px 40px -8px rgba(15, 23, 42, 0.2);
+    /* Shadows: Warm-toned shadows */
+    --shadow-sm: 0 1px 3px 0 rgba(26, 22, 18, 0.08);
+    --shadow-md: 0 4px 12px -2px rgba(26, 22, 18, 0.12);
+    --shadow-lg: 0 12px 24px -4px rgba(26, 22, 18, 0.16);
+    --shadow-xl: 0 20px 40px -8px rgba(26, 22, 18, 0.2);
     --shadow-glow: 0 0 20px rgba(212, 175, 55, 0.3);
 
+    /* Border radius */
     --radius: 12px;
     --radius-lg: 16px;
     --radius-xl: 20px;
     --container: 1200px;
 
+    /* Transitions */
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     --transition-smooth: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* DARK THEME */
+/* DARK THEME: Deep charcoal with warm gold accents */
 body.theme-dark {
-    --primary: #f8fafc;
+    /* Primary: Light text for dark backgrounds */
+    --primary: #faf8f5;
     --primary-hover: #ffffff;
-    --primary-light: #e2e8f0;
+    --primary-light: #e8dfd3;
 
-    --accent: #fbbf24;
-    --accent-light: #fef3c7;
-    --accent-hover: #f59e0b;
-    --accent-dark: #d97706;
+    /* Accent: Brighter gold for dark mode visibility */
+    --accent: #f5c842;
+    --accent-light: #fef8e7;
+    --accent-hover: #d4af37;
+    --accent-dark: #b8941f;
+    --accent-soft: #3d3420;
 
-    --secondary: #cbd5e1;
-    --secondary-light: #94a3b8;
+    /* Secondary: Lighter bronze tones */
+    --secondary: #c9b896;
+    --secondary-light: #a68a5c;
 
-    --bg: #0a0f1a;
-    --bg-secondary: #111827;
-    --bg-elevated: #1f2937;
-    --white: #1f2937;
-    --border: #374151;
-    --border-light: #2d3748;
+    /* Backgrounds: Deep charcoal with warm undertones */
+    --bg: #0a0a0a;
+    --bg-secondary: #1a1612;
+    --bg-elevated: #2d2419;
+    --card-bg: #252119;
+    --white: #2d2419;
+    --border: #3d3420;
+    --border-light: #2d2419;
 
-    --text-main: #f9fafb;
-    --text-secondary: #e5e7eb;
-    --text-muted: #9ca3af;
-    --text-light: #6b7280;
+    /* Text: Off-white to warm gray */
+    --text-main: #faf8f5;
+    --text-secondary: #e8dfd3;
+    --text-muted: #a68a5c;
+    --text-light: #8b7d6f;
 
+    /* Shadows: Deeper shadows for dark mode */
     --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.5);
     --shadow-xl: 0 20px 40px -8px rgba(0, 0, 0, 0.6);
-    --shadow-glow: 0 0 20px rgba(251, 191, 36, 0.4);
+    --shadow-glow: 0 0 20px rgba(245, 200, 66, 0.4);
 }
 
 * {
@@ -405,7 +437,7 @@ header .container {
 }
 
 body.theme-dark .hero {
-    background: linear-gradient(135deg, #0a0f1a 0%, #111827 100%);
+    background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
 }
 
 .hero::before {
@@ -422,7 +454,7 @@ body.theme-dark .hero {
 }
 
 body.theme-dark .hero::before {
-    background: radial-gradient(circle, rgba(251, 191, 36, 0.1) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(245, 200, 66, 0.12) 0%, transparent 70%);
 }
 
 .hero::after {
@@ -439,7 +471,7 @@ body.theme-dark .hero::before {
 }
 
 body.theme-dark .hero::after {
-    background: radial-gradient(circle, rgba(251, 191, 36, 0.05) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(245, 200, 66, 0.08) 0%, transparent 70%);
 }
 
 @keyframes float {
@@ -564,10 +596,48 @@ article p {
 
 footer {
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-    color: #cbd5e1;
+    color: var(--text-secondary);
     padding: 60px 0 20px;
     font-size: 0.9rem;
     position: relative;
+    overflow: hidden;
+}
+
+body.theme-dark footer {
+    background: linear-gradient(135deg, #1a1612 0%, #0d0a08 100%);
+    color: var(--text-secondary);
+}
+
+footer::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 25s ease-in-out infinite;
+    filter: blur(60px);
+}
+
+body.theme-dark footer::before {
+    background: radial-gradient(circle, rgba(245, 200, 66, 0.15) 0%, transparent 70%);
+}
+
+footer .container {
+    position: relative;
+    z-index: 1;
+}
+
+footer a {
+    transition: var(--transition);
+    color: var(--text-secondary);
+}
+
+footer a:hover {
+    color: var(--accent);
+    transform: translateX(3px);
     overflow: hidden;
 }
 
@@ -755,7 +825,7 @@ body.theme-dark #modelos {
 }
 
 article {
-    background: var(--bg-elevated);
+    background: var(--card-bg);
     padding: 40px 30px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
@@ -777,14 +847,6 @@ article h3 {
 article p {
     color: var(--text-muted);
     font-size: 1rem;
-}
-
-/* --- FOOTER --- */
-footer {
-    background-color: var(--primary);
-    color: var(--text-secondary);
-    padding: 60px 0 20px;
-    font-size: 0.9rem;
 }
 
 /* --- NOTIFICACIONES Y FEEDBACK (TOASTS) --- */
@@ -863,7 +925,7 @@ footer {
 }
 
 .card-un {
-    background: var(--bg-elevated);
+    background: var(--card-bg);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border);
     overflow: hidden;
@@ -913,6 +975,7 @@ footer {
     overflow: hidden;
 }
 
+/* Light hover gradient - brightens instead of darkens */
 .card-img::after {
     content: '';
     position: absolute;
@@ -920,7 +983,11 @@ footer {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.25) 100%
+    );
     opacity: 0;
     transition: opacity 0.4s ease;
 }
