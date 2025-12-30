@@ -11,8 +11,7 @@
  */
 
 /* --- VARIABLES & RESET --- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 :root {
     /* Primary: Deep charcoal for text and dark elements */
     --primary: #1a1612;
@@ -51,7 +50,7 @@
     --text-light: #8b7d6f;
 
     /* Typography */
-    --font-heading: 'Playfair Display', serif;
+    --font-heading: 'Outfit', sans-serif;
     --font-body: 'Inter', sans-serif;
 
     /* Shadows: Warm-toned shadows */
@@ -140,9 +139,15 @@ button, input, select, textarea {
 
 h1, h2, h3, h4, .nav-brand {
     font-family: var(--font-heading);
-    letter-spacing: -0.02em;
+    /* El tracking negativo (-0.03em) en sans-serif bold da sensación de bloque sólido/corporativo */
+    letter-spacing: -0.03em; 
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.15; /* Un poco más ajustado para títulos cortos */
+}
+
+.hero h1 {
+    font-weight: 800; /* Extra bold para autoridad */
+    letter-spacing: -0.04em;
 }
 
 td, .monto, .capital {
@@ -486,12 +491,15 @@ body.theme-dark .hero::after {
 }
 
 .hero h1 {
-    font-size: 3.8rem;
+    /* CAMBIO: Tipografía fluida. 
+       Se achica automáticamente entre 2.5rem (celular) y 4.5rem (desktop) */
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
     line-height: 1.1;
-    margin-bottom: 30px;
+    margin-bottom: 25px; /* Reduje un poco para pegar el subtítulo */
     color: var(--primary);
     animation: fadeInUp 0.8s ease-out;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em; /* Tracking ajustado para Outfit */
+    font-weight: 800;
 }
 
 .hero h1 span {
@@ -509,12 +517,17 @@ body.theme-dark .hero::after {
 }
 
 .hero p {
-    font-size: 1.3rem;
+    /* CAMBIO: Aumento el ancho máximo para que entre la frase larga */
+    max-width: 950px; 
+    
+    /* CAMBIO: Tipografía fluida para el subtítulo */
+    font-size: clamp(1rem, 2.5vw, 1.4rem);
+    
     color: var(--text-muted);
-    max-width: 700px;
-    margin: 0 auto 40px;
+    margin: 0 auto; /* Centrado */
     animation: fadeInUp 0.8s ease-out 0.2s both;
-    line-height: 1.7;
+    line-height: 1.5;
+    font-weight: 500;
 }
 
 .investments {
@@ -1072,10 +1085,10 @@ article p {
 }
 
 @media (max-width: 1024px) {
-    .hero h1 {
+    /*.hero h1 {
         font-size: 3rem;
         line-height: 1.15;
-    }
+    }*/
 
     #modelos h2 {
         font-size: 2.2rem;
@@ -1095,11 +1108,11 @@ article p {
         padding: 100px 0 80px;
     }
 
-    .hero h1 {
+    /*.hero h1 {
         font-size: 2.5rem;
         line-height: 1.2;
         margin-bottom: 20px;
-    }
+    }*/
 
     .hero p {
         font-size: 1.15rem;
@@ -1166,10 +1179,10 @@ article p {
         padding: 80px 0 60px;
     }
 
-    .hero h1 {
+    /*.hero h1 {
         font-size: 2rem;
         line-height: 1.25;
-    }
+    }*/
 
     .hero p {
         font-size: 1rem;
