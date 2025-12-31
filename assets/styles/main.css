@@ -436,13 +436,29 @@ header .container {
 .hero {
     padding: 140px 0 120px;
     text-align: center;
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     position: relative;
     overflow: hidden;
+    
+    /* VECTOR UPGRADE: Imagen de fondo con Overlay */
+    /* El primer linear-gradient es el "filtro" que aclara la imagen para que el texto negro se lea */
+    background: 
+        linear-gradient(135deg, rgba(248, 250, 252, 0.92) 0%, rgba(226, 232, 240, 0.88) 100%),
+        url('../img/hero-bg.png'); /* Asegúrate de tener esta imagen */
+        
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed; /* Efecto Parallax sutil: la imagen se queda quieta al hacer scroll */
 }
 
+/* Ajuste para modo oscuro (si el usuario cambia el tema) */
 body.theme-dark .hero {
-    background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
+    /* En modo oscuro, el overlay debe ser negro/oscuro para que el texto blanco se lea */
+    background: 
+        linear-gradient(135deg, rgba(10, 10, 10, 0.90) 0%, rgba(0, 0, 0, 0.85) 100%),
+        url('../img/hero-bg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
 
 .hero::before {
@@ -1261,4 +1277,118 @@ article p {
     background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
     background-size: 1000px 100%;
     animation: shimmer 2s infinite;
+}
+
+/* --- SECCIÓN DIFERENCIAL (MODELO EUREKA) --- */
+#diferencial {
+    padding: 100px 0;
+    background-color: var(--white);
+    overflow: hidden; /* Mantiene la sección limpia */
+}
+
+.diferencial-grid {
+    display: flex;
+    align-items: center;
+    gap: 60px;
+    justify-content: space-between;
+}
+
+.diferencial-content {
+    flex: 1;
+    max-width: 600px;
+    z-index: 2; /* Asegura que el texto esté sobre cualquier decoración */
+}
+
+.diferencial-graphic {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 40px; /* Margen interno extra para que el SVG respire */
+}
+
+/* EL FONDO DE LUZ/SOMBRA (Mejorado para evitar cortes) */
+.diferencial-graphic::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 150%;  /* Mucho más grande que el contenedor para evitar cortes */
+    height: 150%;
+    z-index: 0;
+    pointer-events: none;
+    
+    /* MODO DÍA: Luz Negra / Sombra Radial para resaltar el centro */
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.06) 0%, transparent 60%);
+}
+
+/* MODO NOCHE: Cambiamos a Luz Dorada brillante */
+body.theme-dark .diferencial-graphic::before {
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 60%);
+}
+
+/* --- ESTILOS DEL SVG DINÁMICO --- */
+.diferencial-graphic svg {
+    position: relative;
+    z-index: 1;
+    overflow: visible; /* Permite que sombras del SVG salgan de la caja */
+    transition: transform 0.3s ease;
+}
+
+.diferencial-graphic svg:hover {
+    transform: scale(1.02);
+}
+
+/* Líneas de conexión: Oscuras en día, Doradas en noche */
+.svg-connection {
+    stroke: var(--primary); /* Negro en día */
+    stroke-width: 2;
+    opacity: 0.6; /* Aumentado para mayor visibilidad */
+    transition: all 0.3s ease;
+}
+
+body.theme-dark .svg-connection {
+    stroke: var(--accent); /* Dorado en noche */
+    opacity: 0.8; /* Más visibles en fondo oscuro */
+}
+
+/* Textos dentro del SVG */
+.svg-text-main {
+    /* CORRECCIÓN: Usamos un color oscuro fijo, no variable */
+    fill: #1a1612; /* Siempre charcoal oscuro, porque el fondo del círculo siempre es blanco */
+    font-family: var(--font-heading);
+    font-weight: 700;
+}
+
+.svg-text-sub {
+    fill: var(--accent);
+    font-family: var(--font-body);
+}
+
+/* ... (Mantén el resto de estilos de texto y lista feature-list igual que antes) ... */
+.diferencial-content h2 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    margin-bottom: 25px;
+    color: var(--primary);
+    line-height: 1.1;
+}
+.diferencial-content .intro {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+.feature-list { list-style: none; padding: 0; }
+.feature-list li { position: relative; padding-left: 35px; margin-bottom: 20px; font-size: 1.05rem; color: var(--text-secondary); }
+.feature-list li::before { content: '✦'; position: absolute; left: 0; top: 0px; color: var(--accent); font-size: 1.2rem; font-weight: bold; }
+.feature-list strong { color: var(--primary); font-weight: 700; display: block; margin-bottom: 4px; }
+
+/* Responsive */
+@media (max-width: 900px) {
+    .diferencial-grid { flex-direction: column; gap: 40px; text-align: center; }
+    .diferencial-content { max-width: 100%; }
+    .feature-list { text-align: left; display: inline-block; }
+    .diferencial-graphic::before { width: 120%; height: 120%; } /* Ajuste móvil */
 }
