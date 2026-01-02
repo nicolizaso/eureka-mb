@@ -3,16 +3,16 @@
 const unidadesNegocio = [
     {
         id: "oro",
-        titulo: "Eternity (Oro Activo)",
+        titulo: "Oro Activo",
         descripcion: "Modelo de Arbitraje Comercial + Renta Financiera. Eliminamos el riesgo de mercado respaldando el capital en oro físico y generando una rentabilidad extra mediante bonos.",
         imagen: "assets/img/un-oro.jpg",
         icono: "👑"
     },
     {
-        id: "dropshipping",
-        titulo: "Smart Fulfillment (Dropshipping)",
+        id: "fulfillment",
+        titulo: "Smart Fulfillment",
         descripcion: "Participación en operaciones de e-commerce global (MercadoLibre y Amazon). Gestión de stock y logística 100% tercerizada sin costos fijos de estructura.",
-        imagen: "assets/img/un-dropshipping.jpg",
+        imagen: "assets/img/un-fulfillment.jpg",
         icono: "📦"
     },
     {
@@ -79,22 +79,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const contenedor = document.getElementById('contenedorUnidades');
 
     if (!contenedor) {
-        console.error("No se encontró el contenedor #contenedorUnidades en el HTML.");
+        // Si no estamos en la home, no hacemos nada (evita errores en otras páginas)
         return;
     }
 
     let htmlContent = '';
+    const LIMITE_VISIBLE = 3; // Cantidad de unidades a mostrar inicialmente
 
     unidadesNegocio.forEach((un, index) => {
-        // Fallback visual si no hay imagen (usa el icono)
-        const imagenHtml = un.imagen
-            ? `<div class="card-img" style="background-image: url('${un.imagen}');"></div>`
-            : `<div class="card-icon-placeholder">${un.icono}</div>`;
-
-        // Generamos la tarjeta con animación stagger
+        // Definimos las rutas de las 3 imágenes basadas en el ID y la carpeta nueva
+        const imgSquare = `assets/img/uns/${un.id}3.png`;
+        const imgHoriz1 = `assets/img/uns/${un.id}1.png`;
+        const imgHoriz2 = `assets/img/uns/${un.id}2.png`;
+    
+        // Lógica de ocultamiento (se mantiene igual que lo que tenías)
+        const estaOculto = index >= LIMITE_VISIBLE;
+        const estiloDisplay = estaOculto ? 'display: none;' : '';
+        const claseExtra = estaOculto ? 'unidad-oculta' : '';
+    
         htmlContent += `
-            <article class="card-un" style="animation-delay: ${index * 0.1}s">
-                ${imagenHtml}
+            <article class="card-un ${claseExtra}" style="animation-delay: ${index * 0.1}s; ${estiloDisplay}">
+                
+                <div class="card-img-wrapper">
+                    <img src="${imgSquare}" class="img-static-square" alt="${un.titulo}" loading="lazy">
+                    
+                    <div class="img-rotator">
+                        <img src="${imgHoriz1}" class="img-slide slide-1" alt="${un.titulo} 1">
+                        <img src="${imgHoriz2}" class="img-slide slide-2" alt="${un.titulo} 2">
+                    </div>
+                </div>
+    
                 <div class="card-content">
                     <h3>${un.titulo}</h3>
                     <p>${un.descripcion}</p>
@@ -106,7 +120,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     contenedor.innerHTML = htmlContent;
 
-    // Intersection Observer para animaciones al entrar en viewport
+    // --- LÓGICA DEL BOTÓN "VER MÁS" ---
+    if (unidadesNegocio.length > LIMITE_VISIBLE) {
+        // Creamos el contenedor del botón para centrarlo
+        const btnWrapper = document.createElement('div');
+        btnWrapper.style.width = '100%';
+        btnWrapper.style.textAlign = 'center';
+        btnWrapper.style.marginTop = '40px';
+        btnWrapper.style.gridColumn = '1 / -1'; // Para que ocupe todo el ancho si es grid
+
+        // Creamos el botón
+        const btnVerMas = document.createElement('button');
+        btnVerMas.innerText = 'Ver más unidades de negocio';
+        btnVerMas.className = 'btn btn-outline'; // Usamos tus clases existentes
+        
+        // Evento Click
+        btnVerMas.addEventListener('click', () => {
+            const ocultas = document.querySelectorAll('.unidad-oculta');
+            ocultas.forEach(card => {
+                card.style.display = ''; // Quitamos el display:none para que el CSS mande (flex/grid)
+                // Pequeño truco para reiniciar la animación al aparecer
+                card.style.animationName = 'none';
+                void card.offsetWidth; // Trigger reflow
+                card.style.animationName = ''; 
+                card.classList.add('visible'); // Forzamos visibilidad del observer
+            });
+            // Ocultamos el botón una vez pulsado
+            btnWrapper.style.display = 'none';
+        });
+
+        btnWrapper.appendChild(btnVerMas);
+        
+        // Insertamos el botón DESPUÉS del contenedor de las unidades
+        contenedor.parentNode.insertBefore(btnWrapper, contenedor.nextSibling);
+    }
+
+    // --- INTERSECTION OBSERVER (Animaciones al scrollear) ---
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -121,21 +170,20 @@ document.addEventListener('DOMContentLoaded', () => {
         observer.observe(card);
     });
 
-    // Efecto de scroll en el header
+    // --- LÓGICA DE HEADER Y SCROLL ---
     const header = document.querySelector('header');
-    let lastScroll = 0;
-
-    window.addEventListener('scroll', () => {
-        const currentScroll = window.pageYOffset;
-
-        if (currentScroll > 50) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
-
-        lastScroll = currentScroll;
-    });
+    if (header) {
+        let lastScroll = 0;
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+            if (currentScroll > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+            lastScroll = currentScroll;
+        });
+    }
 
     // Smooth scroll para enlaces internos
     const smoothScrollLinks = document.querySelectorAll('a[href^="#"]');

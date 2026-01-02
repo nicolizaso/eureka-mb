@@ -1,7 +1,7 @@
 /* --- BASE DE DATOS DE UNIDADES (10 MODELOS) --- */
 const dataUN = {
     "oro": {
-        titulo: "Eternity (Oro Activo)",
+        titulo: "Oro Activo",
         subtitle: "Arbitraje Comercial + Renta Financiera.",
         stats: [
             { label: "Rentabilidad", val: "8% - 18% Anual" },
@@ -22,7 +22,7 @@ const dataUN = {
         riesgos: ["Respaldo físico en Oro.", "Sin riesgo de mercado.", "Opción de retiro físico."],
         imagenHero: "linear-gradient(135deg, #FFD700 0%, #B8860B 100%)"
     },
-    "dropshipping": {
+    "fulfillment": {
         titulo: "Smart Fulfillment",
         subtitle: "E-Commerce Global sin barreras operativas.",
         stats: [

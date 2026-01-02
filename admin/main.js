@@ -13,7 +13,7 @@ let carpetaSeleccionadaReingreso = null;
 const unidadesNegocio = [
     { id: 1, nombre: "Parking" },
     { id: 2, nombre: "Departamento" },
-    { id: 3, nombre: "DropShipping" },
+    { id: 3, nombre: "fulfillment" },
     { id: 4, nombre: "Fondo Común" }
 ];
 

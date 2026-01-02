@@ -623,78 +623,155 @@ article p {
     line-height: 1.8;
 }
 
+/* --- FOOTER INSTITUCIONAL MEJORADO --- */
+
 footer {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-    color: var(--text-secondary);
-    padding: 60px 0 20px;
+    background-color: #0f0f0f; /* Casi negro, muy sobrio */
+    color: #999;
+    padding: 80px 0 30px;
     font-size: 0.9rem;
     position: relative;
-    overflow: hidden;
+    border-top: 1px solid #222;
 }
 
-body.theme-dark footer {
-    background: linear-gradient(135deg, #1a1612 0%, #0d0a08 100%);
-    color: var(--text-secondary);
+/* Eliminamos efectos flotantes anteriores si molestan la sobriedad */
+footer::before { display: none; } 
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr 1.5fr; /* Columna legal más ancha */
+    gap: 60px;
+    margin-bottom: 60px;
 }
 
-footer::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
-    border-radius: 50%;
-    animation: float 25s ease-in-out infinite;
-    filter: blur(60px);
+/* Columna 1: Marca */
+.footer-logo {
+    height: 35px;
+    width: auto;
+    margin-bottom: 20px;
+    opacity: 0.9;
 }
 
-body.theme-dark footer::before {
-    background: radial-gradient(circle, rgba(245, 200, 66, 0.15) 0%, transparent 70%);
+.footer-desc {
+    margin-bottom: 25px;
+    line-height: 1.6;
+    max-width: 300px;
 }
 
-footer .container {
-    position: relative;
-    z-index: 1;
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 25px;
 }
 
-footer a {
-    transition: var(--transition);
-    color: var(--text-secondary);
+.contact-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ccc;
+    transition: color 0.3s ease;
 }
 
-footer a:hover {
+.contact-link:hover {
     color: var(--accent);
-    transform: translateX(3px);
-    overflow: hidden;
+    transform: translateX(5px);
 }
 
-footer::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+/* Redes Sociales (Discretas) */
+.social-links {
+    display: flex;
+    gap: 15px;
+}
+
+.social-links a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    animation: float 25s ease-in-out infinite;
-    filter: blur(60px);
+    background-color: #1a1a1a;
+    color: #fff;
+    border: 1px solid #333;
+    transition: all 0.3s ease;
 }
 
-footer .container {
-    position: relative;
-    z-index: 1;
+.social-links a:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: #000; /* Icono negro sobre dorado */
+    transform: translateY(-3px);
 }
 
-footer a {
-    transition: var(--transition);
+/* Columna 2: Links */
+.footer-col h4 {
+    color: #fff;
+    font-size: 1rem;
+    margin-bottom: 25px;
+    letter-spacing: 0.5px;
 }
 
-footer a:hover {
+.footer-menu {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-menu li {
+    margin-bottom: 12px;
+}
+
+.footer-menu a {
+    color: #999;
+    transition: color 0.3s ease;
+}
+
+.footer-menu a:hover {
     color: var(--accent);
-    transform: translateX(3px);
+    padding-left: 5px;
+}
+
+/* Columna 3: Legal (Disclaimer) */
+.legal-text {
+    font-size: 0.8rem; /* Letra chica estándar */
+    line-height: 1.7;
+    color: #666;
+    text-align: justify;
+}
+
+.legal-text p {
+    margin-bottom: 15px;
+}
+
+/* Footer Bottom */
+.footer-bottom {
+    border-top: 1px solid #222;
+    padding-top: 30px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #555;
+}
+
+/* Responsive Footer */
+@media (max-width: 900px) {
+    .footer-grid {
+        grid-template-columns: 1fr; /* Todo en una columna */
+        gap: 50px;
+    }
+
+    .footer-col {
+        text-align: center;
+    }
+    
+    .footer-desc, .contact-info, .social-links {
+        align-items: center;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .legal-text {
+        text-align: center;
+    }
 }
 
 #popupMensaje {
@@ -1391,4 +1468,205 @@ body.theme-dark .svg-connection {
     .diferencial-content { max-width: 100%; }
     .feature-list { text-align: left; display: inline-block; }
     .diferencial-graphic::before { width: 120%; height: 120%; } /* Ajuste móvil */
+}
+
+/* --- LÓGICA DE IMÁGENES DINÁMICAS --- */
+
+/* 1. Definimos la tarjeta como un "Contenedor" para medir su propio ancho */
+.card-un {
+    container-type: inline-size;
+    container-name: card;
+}
+
+/* 2. Estilo base del wrapper de imágenes */
+.card-img-wrapper {
+    position: relative;
+    width: 100%;
+    height: 200px; /* Ajusta esto a la altura que desees fija */
+    overflow: hidden;
+    background-color: #f0f0f0; /* Color de fondo mientras carga */
+}
+
+.card-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Para que la imagen no se deforme */
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: opacity 0.5s ease;
+}
+
+/* --- ESTADO A: TARJETA ANCHA / HORIZONTAL (Por defecto) --- */
+/* Mostramos el rotador y ocultamos la cuadrada */
+
+.img-static-square {
+    opacity: 0;
+    z-index: 1;
+}
+
+.img-rotator {
+    opacity: 1;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+}
+
+/* Animación de rotación (Crossfade) */
+.img-slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    animation: slideShow 10s infinite; /* 10 segundos el ciclo total */
+}
+
+/* La imagen 2 espera la mitad del tiempo para aparecer */
+.slide-2 {
+    animation-delay: 5s; 
+}
+
+@keyframes slideShow {
+    0% { opacity: 0; }
+    10% { opacity: 1; }  /* Aparece rápido */
+    45% { opacity: 1; }  /* Se mantiene visible */
+    55% { opacity: 0; }  /* Desaparece */
+    100% { opacity: 0; }
+}
+
+/* --- ESTADO B: TARJETA CUADRADA / ANGOSTA --- */
+/* Usamos Container Queries: Cuando la tarjeta mida menos de 400px (ajustable) */
+
+@container card (max-width: 290px) {
+    /* Mostramos la imagen 3 (Cuadrada) */
+    .img-static-square {
+        opacity: 1;
+        z-index: 10; /* La ponemos por encima de todo */
+    }
+
+    /* Ocultamos el rotador para ahorrar recursos visuales */
+    .img-rotator {
+        opacity: 0;
+        visibility: hidden; /* Oculta el elemento pero mantiene estructura */
+    }
+}
+
+/* --- SECCIÓN TRANSPARENCIA --- */
+
+.section-transparencia {
+    background-color: #f8f8f8; /* Gris muy claro para diferenciar del blanco */
+    padding: 100px 0;
+    border-top: 1px solid #eaeaea;
+}
+
+.section-header h2 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    color: var(--text-main);
+}
+
+.section-header .subtitle {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 700px;
+    margin: 0 auto 60px auto;
+    line-height: 1.6;
+}
+
+/* Grid de 3 columnas */
+.transparencia-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+/* Tarjetas individuales */
+.trust-card {
+    background: transparent; /* Sin fondo de tarjeta para que se vea limpio sobre el gris, o white si prefieres */
+    padding: 20px;
+    text-align: left;
+    transition: transform 0.3s ease;
+}
+
+/* Iconos */
+.icon-wrapper {
+    width: 60px;
+    height: 60px;
+    background-color: #fff;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    color: var(--accent); /* Dorado */
+}
+
+.icon-wrapper svg {
+    width: 32px;
+    height: 32px;
+}
+
+.trust-card h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
+    margin-bottom: 15px;
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+.trust-card p {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .section-transparencia {
+        padding: 60px 0;
+    }
+    
+    .section-header h2 {
+        font-size: 2rem;
+    }
+    
+    .trust-card {
+        text-align: center;
+    }
+    
+    .icon-wrapper {
+        margin: 0 auto 20px auto;
+    }
+}
+
+/* --- DARK MODE: SECCIÓN TRANSPARENCIA --- */
+
+body.theme-dark .section-transparencia {
+    background-color: var(--bg); /* Fondo negro profundo (#0a0a0a) para contrastar con secciones vecinas */
+    border-top-color: var(--border);
+}
+
+body.theme-dark .icon-wrapper {
+    background-color: var(--bg-elevated); /* Fondo gris/ocre oscuro (#2d2419) */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4); /* Sombra más intensa para dar profundidad */
+    border: 1px solid var(--border); /* Borde sutil para definir el cuadrado */
+    color: var(--accent); /* El icono se mantiene dorado */
+}
+
+body.theme-dark .trust-card h3 {
+    color: var(--text-main); /* Blanco hueso */
+}
+
+body.theme-dark .trust-card p,
+body.theme-dark .section-header .subtitle {
+    color: var(--text-muted); /* Gris cálido / Ocre apagado */
+}
+
+/* Ajuste opcional: Si quieres que las tarjetas tengan un fondo sutil en modo oscuro */
+body.theme-dark .trust-card {
+    background-color: transparent; 
+    /* Si quisieras destacarlas más, podrías usar: background-color: rgba(255,255,255,0.02); */
 }

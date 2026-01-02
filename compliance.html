@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance y Riesgos | MB Eureka</title>
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
+    <link rel="stylesheet" href="assets/styles/main.css">
+    <style>
+        /* ESTILOS ESPECÍFICOS PARA COMPLIANCE */
+        .page-header {
+            background-color: var(--bg-elevated);
+            padding: 120px 0 60px;
+            text-align: center;
+        }
+        
+        .compliance-section {
+            padding: 80px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .policy-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 40px;
+            border-radius: var(--radius-lg);
+            margin-bottom: 30px;
+        }
+
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .risk-item {
+            background: var(--bg);
+            padding: 25px;
+            border-left: 4px solid var(--warning);
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* ACORDEÓN FAQ */
+        .accordion-item {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .accordion-header {
+            width: 100%;
+            text-align: left;
+            padding: 20px 0;
+            background: none;
+            border: none;
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .accordion-header::after {
+            content: '+';
+            font-size: 1.5rem;
+            color: var(--accent);
+            transition: transform 0.3s ease;
+        }
+
+        .accordion-header.active::after {
+            transform: rotate(45deg);
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        
+        .accordion-content p {
+            padding-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <div class="logo">
+                <a href="index.html">
+                    <img src="assets/img/logo-negro.png" alt="MB Eureka" style="height: 40px;">
+                </a>
+            </div>
+            <nav class="nav-links">
+                <a href="index.html#modelos">Unidades</a>
+                <a href="track-record.html">Resultados</a>
+                <a href="login.html" class="btn btn-outline">Acceso Clientes</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="page-header">
+        <div class="container">
+            <h1>Políticas de Riesgo y <span style="color: var(--accent);">Compliance</span></h1>
+            <p style="max-width: 700px; margin: 20px auto 0; color: var(--text-muted);">
+                La transparencia es nuestro principal activo. Aquí detallamos nuestras normas de prevención de lavado y los riesgos operativos asociados a cada unidad.
+            </p>
+        </div>
+    </section>
+
+    <section class="compliance-section">
+        <div class="container">
+            <div class="policy-card">
+                <h3 style="margin-bottom: 20px; color: var(--primary);">🛡️ Prevención de Lavado de Activos (AML)</h3>
+                <p>
+                    Eureka Holding adhiere estrictamente a las normativas de la <strong>UIF (Unidad de Información Financiera)</strong>. 
+                    Nuestro compromiso es garantizar que todo capital gestionado tenga un origen lícito y trazable.
+                </p>
+                <ul style="margin-top: 20px; padding-left: 20px; color: var(--text-secondary);">
+                    <li style="margin-bottom: 10px;">Identificación final del beneficiario (KYC - Know Your Customer).</li>
+                    <li style="margin-bottom: 10px;">Solicitud de documentación respaldatoria de origen de fondos.</li>
+                    <li>Reporte de operaciones inusuales o sospechosas.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="compliance-section" style="background-color: var(--bg-secondary);">
+        <div class="container">
+            <h2 style="text-align: center; margin-bottom: 40px;">Matriz de Riesgos Operativos</h2>
+            <p style="text-align: center; max-width: 800px; margin: 0 auto 40px; color: var(--text-muted);">
+                No existen inversiones sin riesgo. Nuestra gestión profesional busca mitigarlos, pero es vital que el inversor los conozca.
+            </p>
+
+            <div class="risk-grid">
+                <div class="risk-item">
+                    <h4>Agro y Ganadería</h4>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">
+                        <strong>Riesgo:</strong> Climático (Sequía/Inundación) y Biológico. <br>
+                        <strong>Mitigación:</strong> Contratación de Seguros Multirriesgo y diversificación geográfica de campos.
+                    </p>
+                </div>
+                <div class="risk-item" style="border-color: var(--accent);">
+                    <h4>Oro Activo</h4>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">
+                        <strong>Riesgo:</strong> Fluctuación de precio internacional (XAU/USD). <br>
+                        <strong>Mitigación:</strong> Compra con descuento (Arbitraje) que genera un colchón de seguridad ante bajadas.
+                    </p>
+                </div>
+                <div class="risk-item" style="border-color: #3b82f6;">
+                    <h4>Smart Fulfillment</h4>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">
+                        <strong>Riesgo:</strong> Rotación de stock más lenta de lo proyectado. <br>
+                        <strong>Mitigación:</strong> Selección de productos de alta demanda y diversificación en múltiples SKUs.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="compliance-section">
+        <div class="container" style="max-width: 800px;">
+            <h2 style="margin-bottom: 30px;">Preguntas Frecuentes</h2>
+            
+            <div class="accordion">
+                <div class="accordion-item">
+                    <button class="accordion-header">¿Mi capital está garantizado?</button>
+                    <div class="accordion-content">
+                        <p>
+                            En Renta Fija (Oro/Inmuebles), el respaldo es el activo físico directo. En Unidades Productivas, aplicamos una política de 
+                            <strong>"Protección de Capital"</strong>: Eureka subordina sus honorarios y patrimonio a tu recuperación.
+                        </p>
+                        <p>
+                            Ante cualquier eventualidad comercial, nuestra prioridad absoluta es la devolución del 100% de tu aporte inicial, 
+                            incluso si Eureka debe resignar su propia ganancia o absorber costos operativos. 
+                            <strong>El riesgo puede afectar la rentabilidad, pero nunca tu capital base.</strong>
+                        </p>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <button class="accordion-header">¿Qué documentos necesito para invertir?</button>
+                    <div class="accordion-content">
+                        <p>DNI vigente, constancia de CUIT/CUIL y una Declaración Jurada de Origen de Fondos que te proveemos nosotros.</p>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <button class="accordion-header">¿Están regulados por la CNV?</button>
+                    <div class="accordion-content">
+                        <p>Eureka opera como un Holding de Economía Real a través de contratos comerciales (mandato/mutuo), regulados por el Código Civil y Comercial. Para operaciones bursátiles específicas, utilizamos ALyCs reguladas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container" style="text-align: center; color: #fff;">
+            <p>&copy; 2024 MB Eureka. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="assets/js/theme.js"></script>
+    <script>
+        // Script simple para el acordeón
+        document.querySelectorAll('.accordion-header').forEach(button => {
+            button.addEventListener('click', () => {
+                const content = button.nextElementSibling;
+                button.classList.toggle('active');
+                if (button.classList.contains('active')) {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                } else {
+                    content.style.maxHeight = 0;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
