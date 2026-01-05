@@ -1387,13 +1387,99 @@ input::placeholder {
 }
 
 /* Ajuste opcional para móviles para mantener el estilo 'bottom sheet' */
+/* MEDIA QUERY PARA MÓVILES (< 768px) */
 @media (max-width: 768px) {
-    #modalPerfilOverlay .popup {
-        padding: 25px;
-        max-width: 100%;
-        border-radius: 20px 20px 0 0; /* Mantiene bordes redondeados solo arriba en móvil */
+    /* 1. Ocultar la navegación de escritorio */
+    .desktop-nav {
+        display: none !important;
     }
-}
+
+    /* 2. Mostrar la hamburguesa */
+    .hamburger {
+        display: block;
+    }
+
+    /* 3. Estilos del Menú Desplegable (Drawer 75%) */
+    .mobile-nav {
+        display: block;
+        position: fixed;
+        top: 0;
+        right: -100%; /* Oculto inicialmente */
+        width: 75%; /* Ancho solicitado */
+        max-width: 300px;
+        height: 100vh;
+        background: var(--bg-elevated);
+        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 2001;
+        padding: 80px 25px 30px 25px;
+        border-left: 1px solid var(--border);
+        box-shadow: -5px 0 30px rgba(0,0,0,0.15);
+    }
+
+    .mobile-nav.active {
+        right: 0;
+    }
+
+    /* Overlay de fondo */
+    .mobile-overlay {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: rgba(0,0,0,0.6);
+        opacity: 0;
+        visibility: hidden;
+        transition: 0.3s;
+        z-index: 2000;
+        backdrop-filter: blur(3px);
+    }
+
+    .mobile-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* ESTILO DE ENLACES MÓVILES (Fix Definitivo) */
+    .mobile-link {
+        /* Reset total para que <a> y <button> se vean iguales */
+        appearance: none;
+        -webkit-appearance: none;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important; /* Elimina la sombra fantasma */
+        outline: none !important;
+        
+        /* Tipografía Unificada */
+        display: block;
+        width: 100%;
+        text-align: left;
+        font-family: 'Inter', sans-serif; /* Aseguramos la misma fuente */
+        font-size: 1rem !important; /* Tamaño grande y legible */
+        font-weight: 400 !important;
+        color: var(--text-main) !important;
+        
+        /* Espaciado */
+        padding: 15px 0 !important; /* Padding 0 a los costados obligatorio */
+        margin: 0 !important;
+        
+        /* Subrayado Negro Fuerte (Estilo Index) */
+        text-decoration: underline !important;
+        text-decoration-color: var(--text-main) !important; /* Negro/Gris oscuro según tema */
+        text-decoration-thickness: 1px !important; /* Grueso y marcado */
+        text-underline-offset: 4px !important;
+        
+        /* Cursor */
+        cursor: pointer;
+    }
+
+    /* Efecto Hover */
+    .mobile-link:hover {
+        color: var(--accent) !important;
+        text-decoration-color: var(--accent) !important;
+    }
+}   
 
 /* --- ESTILOS MENÚ HAMBURGUESA Y MOBILE --- */
 
@@ -1427,6 +1513,7 @@ input::placeholder {
 .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(7px, -6px); }
 
 /* MEDIA QUERY PARA MÓVILES (< 768px) */
+/* MEDIA QUERY PARA MÓVILES (< 768px) */
 @media (max-width: 768px) {
     /* 1. Ocultar la navegación normal de escritorio */
     .desktop-nav {
@@ -1438,20 +1525,21 @@ input::placeholder {
         display: block;
     }
 
-    /* 3. Estilos del Menú Desplegable */
+    /* 3. Estilos del Menú Desplegable (Estilo Drawer/Cajón) */
     .mobile-nav {
-        display: block; /* Habilitar el bloque */
+        display: block;
         position: fixed;
-        top: 73px; /* Altura aprox del navbar para que no lo tape */
+        top: 0; /* Desde arriba del todo */
         right: -100%; /* Oculto a la derecha */
-        width: 100%; /* Ocupa todo el ancho en celular */
-        height: calc(100vh - 73px);
+        width: 75%; /* NO ocupa el 100%, solo 3/4 de pantalla */
+        max-width: 320px; /* Tope máximo para que no sea gigante en tablets */
+        height: 100vh; /* Altura completa */
         background: var(--bg-elevated);
         transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 99;
-        padding: 30px;
-        border-top: 1px solid var(--border);
-        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+        z-index: 2001; /* Por encima del overlay */
+        padding: 80px 30px 30px 30px; /* Padding top alto para no chocar con la X */
+        border-left: 1px solid var(--border);
+        box-shadow: -5px 0 25px rgba(0,0,0,0.2); /* Sombra para dar profundidad */
     }
 
     .mobile-nav.active {
@@ -1462,15 +1550,16 @@ input::placeholder {
     .mobile-overlay {
         display: block;
         position: fixed;
-        top: 73px;
+        top: 0;
         left: 0;
         width: 100%;
         height: 100vh;
-        background: rgba(0,0,0,0.5);
+        background: rgba(0,0,0,0.5); /* Oscurece el resto de la pantalla */
         opacity: 0;
         visibility: hidden;
         transition: 0.3s;
-        z-index: 98;
+        z-index: 2000;
+        backdrop-filter: blur(2px);
     }
 
     .mobile-overlay.active {
@@ -1478,17 +1567,31 @@ input::placeholder {
         visibility: visible;
     }
 
-    /* Estilo de links en móvil */
+    /* Estilo de links en móvil (Alineados y Subrayados) */
     .mobile-link {
         display: block;
         width: 100%;
-        padding: 15px;
-        text-align: left;
+        padding: 15px 0; /* Cero a los costados */
+        text-align: left; /* Alineación izquierda estricta */
         font-size: 1.1rem;
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid var(--border-light);
         background: none;
-        border: none;
+        border-top: none;
+        border-right: none;
+        border-left: none;
         color: var(--text-main);
+        
+        /* El subrayado que pediste */
+        text-decoration: underline;
+        text-underline-offset: 4px;
+        text-decoration-color: var(--border); /* Subrayado sutil por defecto */
+        transition: all 0.2s;
+    }
+
+    .mobile-link:hover {
+        color: var(--accent);
+        text-decoration-color: var(--accent);
+        padding-left: 10px; /* Pequeño movimiento al tocar */
     }
 }
 
