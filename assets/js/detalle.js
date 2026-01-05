@@ -15,9 +15,9 @@ const dataUN = {
             { time: "Mes 12", text: "Venta/Retiro del Oro + Cobro Intereses" }
         ],
         tiers: [
-            { name: "SILVER", min: 10000, tasa: 8.0, desc: "Excedente 30/70" },
-            { name: "GOLD", min: 30000, tasa: 13.3, desc: "Excedente 50/50" },
-            { name: "BLACK", min: 100000, tasa: 18.7, desc: "Excedente 70/30" }
+            { name: "SILVER", min: 10000, tasa: 8.0, desc: "Compra de Lote Estándar con certificado de pureza" },
+            { name: "GOLD", min: 30000, tasa: 13.3, desc: "Mejor precio de entrada + Custodia Bonificada (1 año)" },
+            { name: "BLACK", min: 100000, tasa: 18.7, desc: "Precio de Refinería + Recompra Garantizada." }
         ],
         riesgos: ["Respaldo físico en Oro.", "Sin riesgo de mercado.", "Opción de retiro físico."],
         imagenHero: "linear-gradient(135deg, #FFD700 0%, #B8860B 100%)"

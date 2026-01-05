@@ -136,7 +136,11 @@ body.theme-dark .hero-overlay {
         grid-template-columns: 1fr;
     }
     .sidebar-col {
-        order: -1;
+        order: 2; /* CAMBIO: La mueve al final (antes tenía -1) */
+        position: static; /* CAMBIO: Quita el sticky para que no flote */
+        width: 100%;
+        margin-top: 50px; /* Aire para separarla del contenido */
+        animation: none; /* Quitamos animación para evitar saltos */
     }
     .detail-hero h1 {
         font-size: 2.5rem;
@@ -734,4 +738,34 @@ body.theme-dark .hero-overlay {
         width: 100%;
         padding: 14px 20px;
     }
+}
+
+/* --- FIX DARK MODE: CALCULADORA --- */
+
+body.theme-dark .calculator-card {
+    border-color: var(--border);
+    background: var(--bg-elevated);
+}
+
+body.theme-dark .calc-header {
+    /* Forzamos un fondo oscuro sólido (simulando el charcoal del modo día) */
+    background: linear-gradient(135deg, #151515 0%, #0a0a0a 100%);
+    border-bottom: 1px solid var(--border);
+}
+
+body.theme-dark .calc-header h3 {
+    color: var(--accent); /* Título en Dorado */
+    text-shadow: none;
+}
+
+body.theme-dark .calc-header p {
+    color: #cccccc; /* Subtítulo en Gris claro */
+    opacity: 1;
+}
+
+/* Ajuste de inputs para que no brillen tanto */
+body.theme-dark .input-group input {
+    background-color: var(--bg); /* Fondo más oscuro */
+    border-color: var(--border);
+    color: #fff;
 }
