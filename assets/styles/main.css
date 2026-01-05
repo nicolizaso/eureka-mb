@@ -1670,3 +1670,75 @@ body.theme-dark .trust-card {
     background-color: transparent; 
     /* Si quisieras destacarlas más, podrías usar: background-color: rgba(255,255,255,0.02); */
 }
+
+/* --- FIX VISUAL: SELECTOR DE TEMA (CÁPSULA) --- */
+
+.theme-toggle {
+    /* 1. Solución al "sobra espacio": Ajustar ancho al contenido */
+    display: inline-flex !important; 
+    width: fit-content !important; 
+    
+    /* 2. Estética: Cápsula compacta */
+    align-items: center;
+    justify-content: center;
+    gap: 4px; /* Espacio justo y necesario entre sol y luna */
+    padding: 4px; /* Aire interno uniforme */
+    
+    background-color: var(--bg-secondary); /* Fondo gris suave */
+    border: 1px solid var(--border);
+    border-radius: 50px; /* Bordes totalmente redondos */
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.06); /* Profundidad sutil */
+}
+
+.theme-toggle-btn {
+    /* 3. Botones perfectamente circulares y centrados */
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50%;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    background: transparent;
+    border: none;
+    color: var(--text-muted); /* Icono gris apagado por defecto */
+    transition: all 0.2s ease-out;
+    margin: 0 !important; /* Reseteamos márgenes externos */
+}
+
+/* Estado Activo (Seleccionado) */
+.theme-toggle-btn.active {
+    background-color: var(--bg-elevated) !important; /* Fondo tarjeta (blanco/negro) */
+    color: var(--accent) !important; /* Dorado */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Elevación suave */
+    transform: scale(1.05); /* Pequeño "pop" visual */
+}
+
+/* Ajuste fino de los íconos */
+.theme-toggle-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+}
+
+/* --- FIX HEADER NAV LINKS (Alineación y Estilo) --- */
+
+.nav-text-link {
+    padding-left: 0 !important;   /* Elimina sangría izquierda */
+    padding-right: 0 !important;  /* Ajuste opcional para compactar */
+    text-decoration: underline !important; /* Subrayado permanente */
+    text-underline-offset: 4px;   /* Separación estética del subrayado */
+}
+
+/* Color al pasar el mouse */
+.nav-text-link:hover {
+    color: var(--accent);
+    text-decoration-color: var(--accent);
+}
+
+/* IMPORTANTE: Desactivar la animación de línea anterior para estos links */
+.nav-links a.nav-text-link::after {
+    display: none !important;
+    content: none !important;
+}

@@ -32,6 +32,30 @@ async function initDashboard() {
     await cargarInversiones();
 }
 
+// --- DENTRO DE TU initDashboard() o al final del archivo ---
+
+// 1. Vincular Logout Móvil (Duplicamos la lógica del de escritorio)
+const btnLogoutMobile = document.getElementById('btnCerrarSesionMobile');
+if (btnLogoutMobile) {
+    btnLogoutMobile.addEventListener('click', () => {
+        // Usa la misma función de signOut que ya tienes
+        signOut(auth).then(() => window.location.href = '../login.html');
+    });
+}
+
+// 2. Vincular Editar Perfil Móvil
+const btnPerfilMobile = document.getElementById('btnEditarPerfilMobile');
+if (btnPerfilMobile) {
+    btnPerfilMobile.addEventListener('click', () => {
+        // Cierra el menú hamburguesa primero para que se vea el modal
+        document.querySelector('.hamburger').click(); 
+        
+        // Abre el modal de perfil (misma lógica que el botón de escritorio)
+        const modal = document.getElementById('modalPerfilOverlay');
+        if (modal) modal.classList.remove('hidden');
+    });
+}
+
 function cargarDatosPerfil() {
     document.getElementById('perfilNombre')?.setAttribute('value', usuarioActual.nombre || '');
     if(document.getElementById('perfilDni')) document.getElementById('perfilDni').value = usuarioActual.dni || '-'; 

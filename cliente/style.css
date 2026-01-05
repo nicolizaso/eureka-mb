@@ -774,6 +774,12 @@ input::placeholder {
     z-index: 2000;
     backdrop-filter: blur(8px);
     animation: fadeIn 0.3s ease;
+
+    /* AGREGADO: Propiedades para centrar el modal */
+    display: flex;
+    justify-content: center;
+    align-items: center; 
+    padding: 15px; /* Margen de seguridad para que no toque los bordes en móviles */
 }
 
 @keyframes fadeIn {
@@ -1368,4 +1374,171 @@ input::placeholder {
     font-size: 0.9rem;
     text-align: center;
     opacity: 0.8;
+}
+
+/* --- CORRECCIÓN MODAL MIS DATOS --- */
+#modalPerfilOverlay .popup {
+    padding: 35px; /* Genera el margen interno que faltaba */
+    width: 100%;
+    max-width: 500px; /* Limita el ancho para que se vea más estético */
+    height: auto; /* Deja que crezca según el contenido */
+    max-height: 90vh;
+    overflow-y: auto; /* Permite scroll si la pantalla es muy chica */
+}
+
+/* Ajuste opcional para móviles para mantener el estilo 'bottom sheet' */
+@media (max-width: 768px) {
+    #modalPerfilOverlay .popup {
+        padding: 25px;
+        max-width: 100%;
+        border-radius: 20px 20px 0 0; /* Mantiene bordes redondeados solo arriba en móvil */
+    }
+}
+
+/* --- ESTILOS MENÚ HAMBURGUESA Y MOBILE --- */
+
+/* Por defecto (Escritorio): Ocultamos hamburguesa y menú móvil */
+.hamburger, .mobile-nav, .mobile-overlay {
+    display: none; 
+}
+
+/* Estilos de la Hamburguesa (Hereda funcionalidad de theme.js) */
+.hamburger {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    z-index: 200; /* Por encima de todo */
+}
+
+.hamburger span {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background-color: var(--text-main);
+    margin: 5px 0;
+    transition: all 0.3s ease;
+    border-radius: 3px;
+}
+
+/* Animación de la X (Activada por theme.js) */
+.hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+.hamburger.active span:nth-child(2) { opacity: 0; }
+.hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(7px, -6px); }
+
+/* MEDIA QUERY PARA MÓVILES (< 768px) */
+@media (max-width: 768px) {
+    /* 1. Ocultar la navegación normal de escritorio */
+    .desktop-nav {
+        display: none !important;
+    }
+
+    /* 2. Mostrar la hamburguesa */
+    .hamburger {
+        display: block;
+    }
+
+    /* 3. Estilos del Menú Desplegable */
+    .mobile-nav {
+        display: block; /* Habilitar el bloque */
+        position: fixed;
+        top: 73px; /* Altura aprox del navbar para que no lo tape */
+        right: -100%; /* Oculto a la derecha */
+        width: 100%; /* Ocupa todo el ancho en celular */
+        height: calc(100vh - 73px);
+        background: var(--bg-elevated);
+        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 99;
+        padding: 30px;
+        border-top: 1px solid var(--border);
+        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+    }
+
+    .mobile-nav.active {
+        right: 0; /* Entra en escena */
+    }
+
+    /* Overlay oscuro de fondo */
+    .mobile-overlay {
+        display: block;
+        position: fixed;
+        top: 73px;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: rgba(0,0,0,0.5);
+        opacity: 0;
+        visibility: hidden;
+        transition: 0.3s;
+        z-index: 98;
+    }
+
+    .mobile-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* Estilo de links en móvil */
+    .mobile-link {
+        display: block;
+        width: 100%;
+        padding: 15px;
+        text-align: left;
+        font-size: 1.1rem;
+        border-bottom: 1px solid var(--border);
+        background: none;
+        border: none;
+        color: var(--text-main);
+    }
+}
+
+/* --- FIX VISUAL: SELECTOR DE TEMA (CÁPSULA) --- */
+
+.theme-toggle {
+    /* 1. Solución al "sobra espacio": Ajustar ancho al contenido */
+    display: inline-flex !important; 
+    width: fit-content !important; 
+    
+    /* 2. Estética: Cápsula compacta */
+    align-items: center;
+    justify-content: center;
+    gap: 4px; /* Espacio justo y necesario entre sol y luna */
+    padding: 4px; /* Aire interno uniforme */
+    
+    background-color: var(--bg-secondary); /* Fondo gris suave */
+    border: 1px solid var(--border);
+    border-radius: 50px; /* Bordes totalmente redondos */
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.06); /* Profundidad sutil */
+}
+
+.theme-toggle-btn {
+    /* 3. Botones perfectamente circulares y centrados */
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50%;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    background: transparent;
+    border: none;
+    color: var(--text-muted); /* Icono gris apagado por defecto */
+    transition: all 0.2s ease-out;
+    margin: 0 !important; /* Reseteamos márgenes externos */
+}
+
+/* Estado Activo (Seleccionado) */
+.theme-toggle-btn.active {
+    background-color: var(--bg-elevated) !important; /* Fondo tarjeta (blanco/negro) */
+    color: var(--accent) !important; /* Dorado */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Elevación suave */
+    transform: scale(1.05); /* Pequeño "pop" visual */
+}
+
+/* Ajuste fino de los íconos */
+.theme-toggle-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
 }

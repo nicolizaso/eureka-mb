@@ -2,36 +2,37 @@
 (function() {
     'use strict';
 
-    // Initialize theme on page load (before first paint)
+    // 1. Cargar tema guardado antes de pintar el DOM (evita parpadeos)
     const savedTheme = localStorage.getItem('theme') || 'light';
     if (savedTheme === 'dark') {
         document.body.classList.add('theme-dark');
     }
 
-    // Wait for DOM to be ready
+    // 2. Esperar a que el DOM esté listo
     document.addEventListener('DOMContentLoaded', function() {
         initThemeToggle();
         initMobileMenu();
-        updateLogo(); // Set correct logo on page load
+        updateLogo();
     });
 
     function initThemeToggle() {
-        const themeToggle = document.querySelector('.theme-toggle');
-        if (!themeToggle) return;
+        // CORRECCIÓN: Usamos querySelectorAll para buscar TODOS los botones, 
+        // no solo los del primer contenedor que encuentre.
+        const lightBtns = document.querySelectorAll('[data-theme="light"]');
+        const darkBtns = document.querySelectorAll('[data-theme="dark"]');
 
-        const lightBtn = themeToggle.querySelector('[data-theme="light"]');
-        const darkBtn = themeToggle.querySelector('[data-theme="dark"]');
-
-        // Set initial state
+        // Sincronizar estado inicial
         updateThemeButtons();
 
-        // Add click handlers
-        if (lightBtn) {
-            lightBtn.addEventListener('click', () => setTheme('light'));
-        }
-        if (darkBtn) {
-            darkBtn.addEventListener('click', () => setTheme('dark'));
-        }
+        // Asignar evento click a TODOS los botones de modo claro
+        lightBtns.forEach(btn => {
+            btn.addEventListener('click', () => setTheme('light'));
+        });
+
+        // Asignar evento click a TODOS los botones de modo oscuro
+        darkBtns.forEach(btn => {
+            btn.addEventListener('click', () => setTheme('dark'));
+        });
 
         function setTheme(theme) {
             if (theme === 'dark') {
@@ -40,38 +41,46 @@
                 document.body.classList.remove('theme-dark');
             }
             localStorage.setItem('theme', theme);
+            
+            // Actualizar UI en todos lados
             updateThemeButtons();
-            updateLogo(); // Update logo when theme changes
+            updateLogo();
         }
 
         function updateThemeButtons() {
             const isDark = document.body.classList.contains('theme-dark');
-            if (lightBtn) {
-                lightBtn.classList.toggle('active', !isDark);
-            }
-            if (darkBtn) {
-                darkBtn.classList.toggle('active', isDark);
-            }
+            
+            // Actualizar estado activo en todos los botones claros
+            lightBtns.forEach(btn => {
+                btn.classList.toggle('active', !isDark);
+            });
+            
+            // Actualizar estado activo en todos los botones oscuros
+            darkBtns.forEach(btn => {
+                btn.classList.toggle('active', isDark);
+            });
         }
     }
 
     function updateLogo() {
         const isDark = document.body.classList.contains('theme-dark');
-        const logoImgs = document.querySelectorAll('.logo img, .navbar-brand img, header img[alt*="Eureka"], header img[alt*="MB"]');
+        // Busca todas las imágenes que parezcan logos
+        const logoImgs = document.querySelectorAll('.logo img, .navbar-brand img, header img[alt*="Eureka"], header img[alt*="MB"], .footer-logo');
 
         logoImgs.forEach(logoImg => {
             if (logoImg) {
                 const currentSrc = logoImg.getAttribute('src');
-                // Determine the correct path based on current location
+                if (!currentSrc) return;
+
+                // Determinar ruta base relativa
                 let basePath = 'assets/img/';
-                if (currentSrc && currentSrc.includes('../assets')) {
+                if (currentSrc.includes('../assets')) {
                     basePath = '../assets/img/';
-                } else if (currentSrc && currentSrc.startsWith('assets/')) {
+                } else if (currentSrc.startsWith('assets/')) {
                     basePath = 'assets/img/';
-                } else if (currentSrc && currentSrc.startsWith('../assets/')) {
-                    basePath = '../assets/img/';
                 }
 
+                // Cambiar el archivo de imagen
                 logoImg.src = isDark ? basePath + 'logo-blanco.png' : basePath + 'logo-negro.png';
             }
         });
@@ -82,6 +91,7 @@
         const mobileNav = document.querySelector('.mobile-nav');
         const mobileOverlay = document.querySelector('.mobile-overlay');
 
+        // Si no existen en esta página, no hacer nada
         if (!hamburger || !mobileNav) return;
 
         hamburger.addEventListener('click', toggleMenu);
@@ -90,13 +100,17 @@
             mobileOverlay.addEventListener('click', closeMenu);
         }
 
-        // Close menu when clicking a link
-        const mobileLinks = mobileNav.querySelectorAll('a');
+        // Cerrar menú al hacer clic en un enlace interno
+        const mobileLinks = mobileNav.querySelectorAll('a, button.nav-link'); // Incluimos botones también
         mobileLinks.forEach(link => {
-            link.addEventListener('click', closeMenu);
+            link.addEventListener('click', (e) => {
+                // Si es solo un toggle de tema, no cerramos el menú
+                if(link.classList.contains('theme-toggle-btn')) return;
+                closeMenu();
+            });
         });
 
-        // Close menu on escape key
+        // Cerrar con tecla ESC
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && mobileNav.classList.contains('active')) {
                 closeMenu();
@@ -119,7 +133,7 @@
                 mobileOverlay.classList.add('active');
             }
             hamburger.setAttribute('aria-expanded', 'true');
-            document.body.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden'; // Bloquear scroll del body
         }
 
         function closeMenu() {
@@ -129,7 +143,7 @@
                 mobileOverlay.classList.remove('active');
             }
             hamburger.setAttribute('aria-expanded', 'false');
-            document.body.style.overflow = '';
+            document.body.style.overflow = ''; // Restaurar scroll
         }
     }
 })();
