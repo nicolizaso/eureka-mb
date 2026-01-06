@@ -12,16 +12,43 @@ function setText(id, text) {
 }
 
 // --- 1. AUTH GUARD ---
+// --- 1. AUTH GUARD ---
 onAuthStateChanged(auth, async (user) => {
     try {
-        if (!user) { window.location.href = '../login.html'; return; }
+        if (!user) { 
+            window.location.href = '../login.html'; 
+            return; 
+        }
+        
         const docRef = doc(db, "usuarios", user.uid);
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && (docSnap.data().rol === 'cliente' || docSnap.data().rol === 'admin')) {
-            usuarioActual = { uid: user.uid, ...docSnap.data() };
-            initDashboard();
-        } else { window.location.href = '../login.html'; }
-    } catch (e) { console.error("Auth error:", e); }
+        
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // --- CORRECCIÓN AQUÍ ---
+            // Leemos el rol, lo pasamos a minúsculas y si no existe, asumimos 'cliente'
+            const userRol = data.rol ? data.rol.toLowerCase() : 'cliente';
+
+            if (userRol === 'cliente' || userRol === 'admin') {
+                // Si no tenía rol guardado, lo usamos en memoria como cliente
+                usuarioActual = { uid: user.uid, ...data, rol: userRol };
+                initDashboard();
+            } else {
+                // Rol explícitamente prohibido o desconocido
+                console.error("Rol no autorizado:", userRol);
+                alert("Acceso no autorizado para este perfil.");
+                await signOut(auth);
+                window.location.href = '../login.html';
+            }
+        } else { 
+            console.error("Usuario Auth sin perfil en DB. Cerrando sesión...");
+            await signOut(auth);
+            window.location.href = '../login.html'; 
+        }
+    } catch (e) { 
+        console.error("Auth error:", e); 
+    }
 });
 
 // --- 2. INIT ---
@@ -31,7 +58,6 @@ async function initDashboard() {
     cargarDatosPerfil();
     await cargarInversiones();
 }
-
 // --- DENTRO DE TU initDashboard() o al final del archivo ---
 
 // 1. Vincular Logout Móvil (Duplicamos la lógica del de escritorio)
