@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /cliente/
+Disallow: /assets/
+Disallow: /private/
+
+Sitemap: https://mbeureka.com/sitemap.xml
