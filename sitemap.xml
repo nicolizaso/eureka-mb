@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+   <url>
+      <loc>https://mbeureka.com/</loc>
+      <lastmod>2024-01-20</lastmod>
+      <priority>1.00</priority>
+   </url>
+   <url>
+      <loc>https://mbeureka.com/login.html</loc>
+      <priority>0.80</priority>
+   </url>
+   <url>
+      <loc>https://mbeureka.com/track-record.html</loc>
+      <priority>0.80</priority>
+   </url>
+   <url>
+      <loc>https://mbeureka.com/compliance.html</loc>
+      <priority>0.60</priority>
+   </url>
+</urlset>
