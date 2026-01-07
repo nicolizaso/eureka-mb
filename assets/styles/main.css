@@ -1026,8 +1026,40 @@ article p {
 
 .grid-inversiones {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 35px;
+    /* ESTA ES LA CLAVE: 3 columnas de igual fracción */
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 30px; /* Espacio entre tarjetas */
+    width: 100%;
+    align-items: stretch; /* Hace que las 3 tarjetas tengan la misma altura */
+}
+
+.grid-inversiones article {
+    width: 100%; /* Asegura que ocupen todo su carril */
+    box-sizing: border-box; /* Para que el padding no rompa el ancho */
+    padding: 30px 20px; /* Espaciado interno cómodo */
+    border-radius: 12px;
+    background-color: #fff; /* Opcional: fondo blanco para resaltar del gris */
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05); /* Sombra suave */
+    transition: transform 0.3s ease;
+}
+
+/* Efecto Hover en toda la tarjeta grande */
+.grid-inversiones article:hover {
+    transform: translateY(-5px);
+}
+
+/* --- RESPONSIVIDAD (IMPORTANTE) --- */
+/* Cuando la pantalla sea muy chica (Tablet/Celular), pasamos a 1 columna */
+@media (max-width: 900px) {
+    .grid-inversiones {
+        grid-template-columns: 1fr; /* Una sola columna (se apilan) */
+        gap: 40px;
+    }
+    
+    /* Ajuste para que los botones de iconos no se rompan en pantallas medianas */
+    .unit-icons-grid {
+        justify-content: center; /* Centrar los botoncitos */
+    }
 }
 
 .card-un {
@@ -1741,4 +1773,169 @@ body.theme-dark .trust-card {
 .nav-links a.nav-text-link::after {
     display: none !important;
     content: none !important;
+}
+/* --- NUEVO ESTILO: TARJETAS DE UNIDADES --- */
+
+.unit-icons-grid {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    /* justify-content: flex-start;  <-- Descomentar si quieres que estén alineados a la izq */
+}
+
+/* El Contenedor (La Tarjeta) */
+.unit-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100px; /* Ancho fijo para uniformidad */
+    padding: 15px 5px;
+    border: 1px solid transparent; /* Se define por perfil abajo */
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    background-color: var(--white);
+    text-align: center;
+}
+
+/* El Círculo del Ícono */
+.unit-icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+}
+
+/* El Texto (Nombre de la Unidad) */
+.unit-name {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 1.2;
+    transition: all 0.3s ease;
+}
+
+/* --- COLORES POR PERFIL (Normal y Hover) --- */
+
+/* 1. PRESERVADOR (Verde) */
+.profile-preservador .unit-card {
+    border-color: #2e7d32; /* Borde Verde */
+}
+.profile-preservador .unit-icon-circle {
+    background-color: #e8f5e9; /* Fondo verde muy suave */
+    color: #2e7d32;
+}
+.profile-preservador .unit-name { color: #2e7d32; }
+
+/* Hover Effect Preservador */
+.profile-preservador .unit-card:hover {
+    background-color: #2e7d32;
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(46, 125, 50, 0.3);
+}
+.profile-preservador .unit-card:hover .unit-icon-circle {
+    background-color: #fff;
+    color: #2e7d32;
+}
+.profile-preservador .unit-card:hover .unit-name { color: #fff; }
+
+
+/* 2. CONSTRUCTOR (Dorado/Accent) */
+.profile-constructor .unit-card {
+    border-color: var(--accent);
+}
+.profile-constructor .unit-icon-circle {
+    background-color: rgba(212, 175, 55, 0.1); /* Dorado suave */
+    color: var(--accent);
+}
+.profile-constructor .unit-name { color: var(--accent); }
+
+/* Hover Effect Constructor */
+.profile-constructor .unit-card:hover {
+    background-color: var(--accent);
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+}
+.profile-constructor .unit-card:hover .unit-icon-circle {
+    background-color: #fff;
+    color: var(--accent);
+}
+.profile-constructor .unit-card:hover .unit-name { color: #fff; }
+
+
+/* 3. POTENCIADOR (Rojo) */
+.profile-potenciador .unit-card {
+    border-color: #c62828;
+}
+.profile-potenciador .unit-icon-circle {
+    background-color: #ffebee; /* Rojo suave */
+    color: #c62828;
+}
+.profile-potenciador .unit-name { color: #c62828; }
+
+/* Hover Effect Potenciador */
+.profile-potenciador .unit-card:hover {
+    background-color: #c62828;
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(198, 40, 40, 0.3);
+}
+.profile-potenciador .unit-card:hover .unit-icon-circle {
+    background-color: #fff;
+    color: #c62828;
+}
+.profile-potenciador .unit-card:hover .unit-name { color: #fff; }
+
+/* --- FIX DARK MODE: SECCIÓN PERFILES --- */
+
+/* 1. Fondo de la tarjeta principal (El Preservador, Constructor, etc.) */
+body.theme-dark .grid-inversiones article {
+    background-color: #121212; /* Gris casi negro */
+    border-left: 1px solid #333;
+    border-right: 1px solid #333;
+    border-bottom: 1px solid #333;
+    box-shadow: none; /* En modo noche las sombras se ven raras, mejor quitarlas */
+}
+
+/* 2. Fondo de los botones pequeños (Unit Cards) */
+body.theme-dark .unit-card {
+    background-color: #1e1e1e; /* Un gris un poco más claro para generar contraste */
+    border-color: #333; /* Borde sutil por defecto */
+}
+
+/* 3. Ajuste de los círculos de iconos (Para que no sean pasteles brillantes en la oscuridad) */
+body.theme-dark .unit-icon-circle {
+    background-color: rgba(255, 255, 255, 0.08) !important; /* Fondo translúcido oscuro */
+}
+
+/* 4. Títulos y textos descriptivos */
+body.theme-dark .grid-inversiones h3,
+body.theme-dark .grid-inversiones p {
+    color: #e0e0e0; /* Blanco no tan fuerte para no cansar la vista */
+}
+
+/* --- MANTENER LOS COLORES DE ACENTO EN HOVER (Modo Noche) --- */
+
+/* Preservador Hover */
+body.theme-dark .profile-preservador .unit-card:hover {
+    background-color: #1b5e20; /* Verde oscuro intenso */
+    border-color: #2e7d32;
+}
+
+/* Constructor Hover */
+body.theme-dark .profile-constructor .unit-card:hover {
+    background-color: #bfa32a; /* Dorado oscurecido */
+    border-color: var(--accent);
+}
+
+/* Potenciador Hover */
+body.theme-dark .profile-potenciador .unit-card:hover {
+    background-color: #b71c1c; /* Rojo oscuro intenso */
+    border-color: #c62828;
 }
