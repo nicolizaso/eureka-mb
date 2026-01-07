@@ -283,6 +283,22 @@ function renderPage(data) {
     data.riesgos.forEach(r => {
         riskList.innerHTML += `<li>${r}</li>`;
     });
+
+    // --- NUEVO: Configurar botón de WhatsApp Dinámico ---
+    const btnAsesor = document.querySelector('.btn-text-center'); // Seleccionamos el botón
+    
+    if (btnAsesor) {
+        const telefono = "5491172354786"; // Tu número
+        // Mensaje personalizado: "Hola, me interesa invertir en Oro Activo..."
+        const mensaje = `Hola, estuve viendo la unidad de negocio *${data.titulo}* y me gustaría recibir asesoramiento personalizado.`;
+        
+        // Codificar el mensaje para URL (reemplaza espacios por %20, etc.)
+        const urlWhatsApp = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+        
+        // Asignar el link al botón
+        btnAsesor.href = urlWhatsApp;
+        btnAsesor.target = "_blank"; // Abrir en nueva pestaña
+    };
 }
 
 /* --- CALCULADORA DE ROI --- */
