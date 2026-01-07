@@ -65,7 +65,7 @@
     function updateLogo() {
         const isDark = document.body.classList.contains('theme-dark');
         // Busca todas las imágenes que parezcan logos
-        const logoImgs = document.querySelectorAll('.logo img, .navbar-brand img, header img[alt*="Eureka"], header img[alt*="MB"], .footer-logo');
+        const logoImgs = document.querySelectorAll('.logo img, .navbar-brand img, header img[alt*="Eureka"], header img[alt*="MB"]');
 
         logoImgs.forEach(logoImg => {
             if (logoImg) {
