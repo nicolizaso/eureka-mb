@@ -1,6 +1,6 @@
 import { auth, db } from '../assets/js/firebase.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js";
-import { collection, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
 import { formatearMoneda, formatearFecha } from '../assets/js/utils.js';
 
 // --- VARIABLES GLOBALES ---
@@ -44,25 +44,49 @@ async function initAdmin() {
 // ======================================================
 // 2. CARGA DE BASE DE DATOS (CRÍTICO: DEEP LOAD)
 // ======================================================
+// ======================================================
+// 2. CARGA DE BASE DE DATOS (ACTUALIZADO)
+// ======================================================
 async function cargarBaseDeDatos() {
     try {
+        // 1. Traemos las Solicitudes
         const snap = await getDocs(collection(db, "solicitudes"));
         
-        // Carga profunda: Traemos reingresos para cada carpeta
+        // 2. NUEVO: Traemos la colección de Cuotas Manuales existente
+        const cuotasSnap = await getDocs(collection(db, "cuotas"));
+        const mapaCuotasManuales = {};
+
+        cuotasSnap.forEach(doc => {
+            const data = doc.data();
+            // Organizamos por Carpeta -> Mes
+            // Estructura: mapa['12345 - NP/1']['2025-04'] = 1680
+            if (!mapaCuotasManuales[data.carpeta]) {
+                mapaCuotasManuales[data.carpeta] = {};
+            }
+            mapaCuotasManuales[data.carpeta][data.mes] = parseFloat(data.monto);
+        });
+
+        // 3. Procesamos las solicitudes e inyectamos los reingresos y las cuotas manuales
         const promesas = snap.docs.map(async (d) => {
             const data = d.data();
             const id = d.id;
-            // Traer subcolección de reingresos
+            
+            // Reingresos
             const reingresosSnap = await getDocs(collection(db, `solicitudes/${id}/reingresos`));
             const reingresos = reingresosSnap.docs.map(r => r.data());
-            return { id, ...data, reingresos }; 
+            
+            // Inyectar ajustes manuales si existen para esta carpeta
+            const ajustes = mapaCuotasManuales[data.carpeta] || {};
+
+            return { id, ...data, reingresos, ajustesCuota: ajustes }; 
         });
 
         cacheSolicitudes = await Promise.all(promesas);
         
-        // Agrupar por Cliente
+        // ... (El resto del código de agrupación sigue igual) ...
         const mapa = {};
         cacheSolicitudes.forEach(sol => {
+            // ... (tu lógica de agrupación existente) ...
             const dni = sol.dni || 'SIN_DNI';
             if (!mapa[dni]) {
                 mapa[dni] = { 
@@ -75,7 +99,6 @@ async function cargarBaseDeDatos() {
                 };
             }
             
-            // Calcular Capital Real (Base + Reingresos)
             let cap = parseFloat(String(sol.capital).replace(/[^\d,.-]/g,'').replace(',','.'));
             if(sol.reingresos) {
                 sol.reingresos.forEach(r => {
@@ -83,7 +106,6 @@ async function cargarBaseDeDatos() {
                 });
             }
             
-            // Tasa Base
             const tasa = parseFloat(String(sol.ganancia).replace(',', '.'));
 
             mapa[dni].capitalTotal += cap;
@@ -97,7 +119,7 @@ async function cargarBaseDeDatos() {
 
         datosAgrupados = Object.values(mapa);
         calcularTesoreriaDashboard();
-        console.log("Datos actualizados correctamente.");
+        console.log("Datos actualizados correctamente (con Cuotas Manuales).");
 
     } catch (e) {
         console.error("Error DB:", e);
@@ -185,16 +207,29 @@ function setupAutocomplete() {
 }
 
 function renderSugerencias(matches, contenedor, inpNombre, inpDni) {
+    // Si no hay coincidencias, no hacemos nada
     if (matches.length === 0) return;
+
+    // 1. Limpiamos resultados viejos (ESTO ES LO QUE FALTABA)
+    contenedor.innerHTML = ''; 
+
+    // 2. Mostramos el contenedor
     contenedor.classList.remove('hidden');
+
+    // 3. Generamos los nuevos resultados
     matches.slice(0, 5).forEach(c => {
         const item = document.createElement('div');
         item.className = 'autocomplete-item';
         item.innerHTML = `<strong>${c.nombre}</strong> <small>${c.dni}</small>`;
+        
         item.addEventListener('click', () => {
-            inpNombre.value = c.nombre; inpDni.value = c.dni; cerrarListas();
+            inpNombre.value = c.nombre; 
+            inpDni.value = c.dni; 
+            cerrarListas();
+            // Disparamos evento input para que otros listeners reaccionen si es necesario
             inpNombre.dispatchEvent(new Event('input')); 
         });
+        
         contenedor.appendChild(item);
     });
 }
@@ -565,59 +600,61 @@ function abrirModalPerfil(cliente) {
     listaMain.classList.add('hidden');
 }
 
-// --- 7. PAGOS (MODIFICADO: Muestra "Cuota X/XX" en el listado) ---
 window.abrirHistorialPagos = (id) => {
+    // 1. Buscamos la carpeta en memoria
     const c = cacheSolicitudes.find(s => s.id === id);
     if (!c) return;
 
     const modal = document.getElementById('modalPagosAdmin');
     document.getElementById('headerPagosInfo').innerHTML = `<h3 style="margin:0">Gestión Pagos</h3><p style="margin:0; color:#666">Carpeta #${c.carpeta}</p>`;
     
+    // 2. Calculamos los pagos (ahora incluye los manuales que cargamos en cargarBaseDeDatos)
     const pagos = calcularPagosSimples(c);
     const realizados = c.pagosRealizados || [];
     const lista = document.getElementById('listaPagosAdmin');
     
-    // Obtener mes actual para el borde negro
     const hoyKey = new Date().toISOString().slice(0, 7);
-    const totalCuotas = parseInt(c.periodos); // Total para mostrar "/12"
+    const totalCuotas = parseInt(c.periodos); 
 
     lista.innerHTML = '';
     
-    // Agregamos 'index' al forEach para saber el número de cuota
     pagos.forEach((p, index) => {
         const done = realizados.includes(p.key);
         const [a, m] = p.key.split('-');
         
-        // LÓGICA DE TEXTO CUOTA
         let labelCuota;
         if (p.esCapital) {
             labelCuota = "Devolución Capital";
         } else {
-            // El índice arranca en 0, así que sumamos 1.
-            // Ejemplo: index 0 -> Cuota 1 / 12
             labelCuota = `Cuota ${index + 1} / ${totalCuotas}`;
         }
 
-        // Lógica visual (Mes actual y Pagado)
         const esMesActual = p.key === hoyKey;
         const claseCurrent = esMesActual ? 'current-month' : '';
         const clasePagada = done ? 'marked-paid' : '';
+
+        // ID único para identificar esta fila en el HTML
+        const rowId = `row-${c.id}-${p.key}`;
 
         const row = document.createElement('div');
         row.className = `payment-row ${clasePagada} ${claseCurrent}`;
         
         row.innerHTML = `
-            <div class="payment-info">
+            <div class="payment-info" style="flex:1;">
                 <div style="display:flex; gap:10px; align-items:center;">
                     <span class="pay-date">${m}/${a.slice(2)}</span>
                     <span style="font-size:0.8rem; color:#666; font-weight:600;">${labelCuota}</span>
                 </div>
-                <div>
+                
+                <div id="${rowId}" class="edit-amount-wrapper">
                     <span class="pay-amount">${formatearMoneda(p.monto)}</span>
                     <span class="pay-status">${done ? 'ABONADA' : 'PENDIENTE'}</span>
+                    
+                    <button class="btn-edit-icon" onclick="activarEdicionMonto('${rowId}', '${c.carpeta}', '${p.key}', ${p.monto})" title="Editar monto manual">✏️</button>
                 </div>
             </div>
-            <label class="payment-check-group">
+
+            <label class="payment-check-group" style="margin-left:15px;">
                 <input type="checkbox" ${done ? 'checked' : ''} onchange="togglePago('${c.id}', '${p.key}', this)">
             </label>
         `;
@@ -675,29 +712,47 @@ function calcularPagosSimples(solicitud) {
     const fInicio = new Date(y, m - 1, d);
     const reingresos = solicitud.reingresos || [];
     
-    // IMPORTANTE: periodos viene actualizado de DB si se extendió
+    // Obtenemos los ajustes manuales cargados desde la colección 'cuotas'
+    const ajustes = solicitud.ajustesCuota || {}; 
+    
     for (let i = 0; i < parseInt(solicitud.periodos); i++) {
         const fPago = new Date(fInicio.getFullYear(), fInicio.getMonth() + i + 1, 1);
         const keyPago = `${fPago.getFullYear()}-${String(fPago.getMonth() + 1).padStart(2, '0')}`;
         
-        let capitalVigente = capitalBase;
-        let tasaVigente = tasaBase;
-        
-        reingresos.forEach(r => {
-            // Si la fecha de impacto ya llegó
-            if (r.impactoDesde <= keyPago) {
-                capitalVigente += parseFloat(String(r.capital));
-                tasaVigente = parseFloat(String(r.tasa)) / 100;
-            }
-        });
-        const montoCuota = capitalVigente * tasaVigente;
+        let montoCuota = 0;
+
+        // 1. ¿Existe un documento en 'cuotas' para este mes?
+        if (ajustes[keyPago] !== undefined) {
+            montoCuota = parseFloat(ajustes[keyPago]);
+        } else {
+            // 2. Si no, cálculo automático estándar
+            let capitalVigente = capitalBase;
+            let tasaVigente = tasaBase;
+            
+            reingresos.forEach(r => {
+                if (r.impactoDesde <= keyPago) {
+                    capitalVigente += parseFloat(String(r.capital));
+                    tasaVigente = parseFloat(String(r.tasa)) / 100;
+                }
+            });
+            montoCuota = capitalVigente * tasaVigente;
+        }
+
         pagos.push({ key: keyPago, monto: montoCuota });
     }
+
+    // Cuota final (Capital)
     const fDevol = new Date(fInicio.getFullYear(), fInicio.getMonth() + parseInt(solicitud.periodos) + 1, 1);
     const keyDev = `${fDevol.getFullYear()}-${String(fDevol.getMonth() + 1).padStart(2, '0')}`;
     
     let capitalFinal = capitalBase;
     reingresos.forEach(r => capitalFinal += parseFloat(String(r.capital)));
+    
+    // Permitir ajuste manual también en la devolución de capital
+    if (ajustes[keyDev] !== undefined) {
+        capitalFinal = parseFloat(ajustes[keyDev]);
+    }
+
     pagos.push({ key: keyDev, monto: capitalFinal, esCapital: true });
     return pagos;
 }
@@ -722,73 +777,157 @@ function calcularInfoCuota(s) {
 
 // --- LÓGICA DEL MODAL TESORERÍA (DETALLE MENSUAL) ---
 // --- TESORERÍA CON BUSCADOR ---
-let itemsTesoreriaCache = []; // Variable para guardar la lista completa
+// ======================================================
+// LÓGICA DASHBOARD TESORERÍA (EN LA TARJETA)
+// ======================================================
+
+let itemsTesoreriaCache = []; 
 
 function calcularTesoreriaDashboard() {
-    const hoyKey = new Date().toISOString().slice(0, 7);
-    let totalMes = 0;
-    cacheSolicitudes.forEach(c => {
-        if ((c.estado || 'Activa') === 'Activa') {
-            const pagos = calcularPagosSimples(c);
-            const pago = pagos.find(p => p.key === hoyKey);
-            if (pago) totalMes += pago.monto;
-        }
-    });
-    const kpi = document.getElementById('kpiTesoreriaMes');
-    if (kpi) kpi.textContent = formatearMoneda(totalMes);
-}
-
-// 1. ABRIR Y CARGAR DATOS
-document.getElementById('btnAbrirTesoreria').addEventListener('click', () => {
-    const hoyKey = new Date().toISOString().slice(0, 7);
-    const totalHeader = document.getElementById('totalTesoreriaModal');
+    const hoyKey = new Date().toISOString().slice(0, 7); // "YYYY-MM"
     
-    // Limpiar input filtro
-    const inputFiltro = document.getElementById('filtroTesoreria');
-    if(inputFiltro) inputFiltro.value = '';
-
-    let totalLiquidar = 0;
-    itemsTesoreriaCache = []; // Reiniciamos caché
+    let totalIngresos = 0;
+    let totalEgresos = 0;
+    
+    itemsTesoreriaCache = []; // Reiniciamos caché para el modal
 
     cacheSolicitudes.forEach(c => {
-        if ((c.estado || 'Activa') === 'Activa') {
+        const estado = (c.estado || 'Activa');
+        
+        // 1. CÁLCULO INGRESOS (Carpetas Nuevas + Reingresos de este mes)
+        // A. Carpeta nueva creada este mes
+        if (c.fecha && c.fecha.startsWith(hoyKey)) {
+            totalIngresos += parseFloat(c.capital);
+        }
+        
+        // B. Reingresos cargados este mes
+        if (c.reingresos && c.reingresos.length > 0) {
+            c.reingresos.forEach(r => {
+                if (r.fecha && r.fecha.startsWith(hoyKey)) {
+                    totalIngresos += parseFloat(r.capital);
+                }
+            });
+        }
+
+        // 2. CÁLCULO EGRESOS (Cuotas a pagar este mes)
+        // Solo si la carpeta está activa
+        if (estado === 'Activa') {
             const pagos = calcularPagosSimples(c);
             const pagoDelMes = pagos.find(p => p.key === hoyKey);
+            
             if (pagoDelMes) {
-                totalLiquidar += pagoDelMes.monto;
+                totalEgresos += pagoDelMes.monto;
+                // Guardamos para el modal
                 itemsTesoreriaCache.push({ folder: c, pago: pagoDelMes });
             }
         }
     });
 
-    if(totalHeader) totalHeader.textContent = formatearMoneda(totalLiquidar);
+    // 3. ACTUALIZAR DOM DE LA TARJETA
+    const elIng = document.getElementById('cardIngresos');
+    const elEgr = document.getElementById('cardEgresos');
+    const elBal = document.getElementById('cardBalance');
+
+    if(elIng) elIng.textContent = formatearMoneda(totalIngresos);
+    if(elEgr) elEgr.textContent = formatearMoneda(totalEgresos);
     
+    if(elBal) {
+        const balance = totalIngresos - totalEgresos;
+        elBal.textContent = formatearMoneda(balance);
+        elBal.style.color = balance >= 0 ? "#2e7d32" : "#c62828";
+    }
+}
+
+// Evento para abrir el modal (Solo lista)
+document.getElementById('btnAbrirTesoreria').addEventListener('click', () => {
     // Ordenar alfabéticamente
     itemsTesoreriaCache.sort((a, b) => a.folder.nombre.localeCompare(b.folder.nombre));
     
-    // Renderizar todo
+    // Renderizar la lista en el modal
     renderizarListaTesoreria(itemsTesoreriaCache);
-    document.getElementById('modalTesoreria').classList.remove('hidden');
     
-    // Foco en el buscador
-    setTimeout(() => inputFiltro.focus(), 100);
-});
-
-// 2. ESCUCHAR FILTRO (BÚSQUEDA)
-document.getElementById('filtroTesoreria')?.addEventListener('input', (e) => {
-    const texto = e.target.value.toLowerCase();
-    
-    if (texto.length === 0) {
-        renderizarListaTesoreria(itemsTesoreriaCache); // Mostrar todo
-        return;
+    // Actualizar el totalito del header del modal (opcional, si lo dejaste)
+    const totalHeader = document.getElementById('totalTesoreriaModal');
+    if(totalHeader) {
+        // Sumamos solo egresos para el título del modal
+        const total = itemsTesoreriaCache.reduce((sum, item) => sum + item.pago.monto, 0);
+        totalHeader.textContent = formatearMoneda(total);
     }
-
-    const filtrados = itemsTesoreriaCache.filter(item => 
-        item.folder.nombre.toLowerCase().includes(texto) || 
-        item.folder.carpeta.toLowerCase().includes(texto)
-    );
     
-    renderizarListaTesoreria(filtrados);
+    // Abrir
+    const inputFiltro = document.getElementById('filtroTesoreria');
+    if(inputFiltro) { inputFiltro.value = ''; }
+    document.getElementById('modalTesoreria').classList.remove('hidden');
+});
+// ======================================================
+// 7. LÓGICA DEL MODAL TESORERÍA (CON DASHBOARD)
+// ======================================================
+
+// 1. ABRIR Y CARGAR DATOS
+document.getElementById('btnAbrirTesoreria').addEventListener('click', () => {
+    const hoyKey = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    
+    // Variables para los KPIs
+    let totalIngresosMes = 0;
+    let totalEgresosMes = 0; // Lo que hay que pagar (Cuotas)
+    
+    itemsTesoreriaCache = []; // Reiniciamos caché de la lista visual
+
+    // Recorremos TODAS las carpetas para sumar
+    cacheSolicitudes.forEach(c => {
+        const estado = (c.estado || 'Activa');
+        
+        // A. CÁLCULO DE INGRESOS (Nuevas Carpetas + Reingresos de este mes)
+        // 1. ¿La carpeta se creó este mes?
+        if (c.fecha && c.fecha.startsWith(hoyKey)) {
+            totalIngresosMes += parseFloat(c.capital);
+        }
+        
+        // 2. ¿Hubo reingresos este mes?
+        if (c.reingresos && c.reingresos.length > 0) {
+            c.reingresos.forEach(r => {
+                if (r.fecha && r.fecha.startsWith(hoyKey)) {
+                    totalIngresosMes += parseFloat(r.capital);
+                }
+            });
+        }
+
+        // B. CÁLCULO DE EGRESOS (Solo carpetas activas pagan)
+        if (estado === 'Activa') {
+            const pagos = calcularPagosSimples(c);
+            const pagoDelMes = pagos.find(p => p.key === hoyKey);
+            
+            if (pagoDelMes) {
+                totalEgresosMes += pagoDelMes.monto;
+                // Agregamos a la lista visual de abajo
+                itemsTesoreriaCache.push({ folder: c, pago: pagoDelMes });
+            }
+        }
+    });
+
+    // C. ACTUALIZAR INTERFAZ (KPIs)
+    const balance = totalIngresosMes - totalEgresosMes;
+    
+    document.getElementById('kpiIngresos').textContent = formatearMoneda(totalIngresosMes);
+    document.getElementById('kpiEgresos').textContent = formatearMoneda(totalEgresosMes);
+    
+    const elBalance = document.getElementById('kpiBalance');
+    elBalance.textContent = formatearMoneda(balance);
+    // Color dinámico del balance
+    if(balance >= 0) elBalance.style.color = "#2e7d32"; // Verde
+    else elBalance.style.color = "#c62828"; // Rojo
+
+    // D. RENDERIZAR LISTA DE PAGOS
+    // Ordenar alfabéticamente por nombre
+    itemsTesoreriaCache.sort((a, b) => a.folder.nombre.localeCompare(b.folder.nombre));
+    
+    renderizarListaTesoreria(itemsTesoreriaCache);
+    
+    // Limpiar filtro y abrir modal
+    const inputFiltro = document.getElementById('filtroTesoreria');
+    if(inputFiltro) { inputFiltro.value = ''; setTimeout(() => inputFiltro.focus(), 100); }
+    
+    document.getElementById('modalTesoreria').classList.remove('hidden');
 });
 
 // 3. FUNCIÓN DE RENDERIZADO (SEPARADA)
@@ -836,7 +975,102 @@ function renderizarListaTesoreria(lista) {
     });
 }
 
-    modal.classList.remove('hidden');
+// ======================================================
+// 8. FUNCIONES PARA EDICIÓN MANUAL DE CUOTAS
+// ======================================================
+
+// Activar el modo edición (convierte texto en input)
+window.activarEdicionMonto = (rowId, carpetaNombre, keyPago, montoActual) => {
+    const container = document.getElementById(rowId);
+    if(!container) return;
+
+    // Reemplazamos el monto por un input y botones
+    container.innerHTML = `
+        <input type="number" id="input-${rowId}" class="input-edit-monto" value="${montoActual}" step="0.01">
+        <button class="btn-save-mini" onclick="guardarAjusteCuota('${carpetaNombre}', '${keyPago}', 'input-${rowId}')" title="Guardar">💾</button>
+        <button class="btn-edit-icon" onclick="cerrarEdicion('${rowId}', ${montoActual})" title="Cancelar">❌</button>
+    `;
+    
+    // Poner el foco en el input automáticamente
+    setTimeout(() => {
+        const input = document.getElementById(`input-${rowId}`);
+        if(input) input.focus();
+    }, 100);
+};
+
+// Guardar el nuevo monto en Firebase
+// Guardar el nuevo monto en Firebase
+window.guardarAjusteCuota = async (carpetaNombre, keyPago, inputId) => {
+    const input = document.getElementById(inputId);
+    if(!input) return;
+    
+    const nuevoValor = parseFloat(input.value);
+
+    if (isNaN(nuevoValor) || nuevoValor < 0) {
+        alert("Por favor, ingrese un monto válido.");
+        return;
+    }
+
+    // Feedback visual de carga
+    const btn = input.nextElementSibling;
+    if(btn) btn.textContent = "⏳";
+
+    try {
+        // CORRECCIÓN AQUÍ: Reemplazamos las barras "/" por guiones "_" para que Firebase no se rompa
+        // Ejemplo: "MS/3" pasará a ser "MS_3" en el ID (pero el dato interno sigue siendo MS/3)
+        const idSanitizado = carpetaNombre.replace(/\//g, '_');
+        const docIdCuota = `${idSanitizado}_${keyPago}`;
+
+        // Guardar/Sobrescribir en la colección 'cuotas'
+        await setDoc(doc(db, "cuotas", docIdCuota), {
+            carpeta: carpetaNombre, // Aquí guardamos el nombre original con la barra "/"
+            mes: keyPago,
+            monto: nuevoValor,
+            manual: true,
+            fechaModificacion: new Date().toISOString()
+        });
+
+        // Actualizar caché local
+        const solicitudEnCache = cacheSolicitudes.find(s => s.carpeta === carpetaNombre);
+        
+        if (solicitudEnCache) {
+            if (!solicitudEnCache.ajustesCuota) solicitudEnCache.ajustesCuota = {};
+            solicitudEnCache.ajustesCuota[keyPago] = nuevoValor;
+            
+            // Recargamos el historial visualmente
+            abrirHistorialPagos(solicitudEnCache.id); 
+            mostrarFeedback("Guardado", "Cuota actualizada correctamente.");
+        } else {
+            await cargarBaseDeDatos();
+            mostrarFeedback("Guardado", "Datos actualizados.");
+        }
+
+    } catch (e) {
+        console.error("Error al guardar cuota manual:", e);
+        // Si falla, restauramos el botón
+        if(btn) btn.textContent = "💾";
+        alert(`Error técnico: ${e.message}`);
+    }
+};
+
+// Cancelar edición (restaurar valor original visualmente)
+window.cerrarEdicion = (rowId, valorOriginal) => {
+    const container = document.getElementById(rowId);
+    if(!container) return;
+
+    // Volver a dibujar el HTML original del renglón
+    // Nota: Como es complejo reconstruir todo el HTML con onclicks desde aquí,
+    // lo más seguro es recargar el modal completo usando el ID de la carpeta.
+    // Pero como no tenemos el ID de doc a mano aquí, simplificamos restaurando texto:
+    
+    container.innerHTML = `
+        <span class="pay-amount">${formatearMoneda(valorOriginal)}</span>
+        <span class="pay-status" style="font-size:0.8rem; color:#666;">(Cancelado)</span>
+        <button class="btn-edit-icon" onclick="alert('Cierre y abra el historial para editar de nuevo')">✏️</button>
+    `;
+    // Idealmente el usuario solo cierra y abre el historial si quiere editar de nuevo,
+    // o podríamos buscar el ID de documento en el DOM para llamar a abrirHistorialPagos.
+};
 
 window.cambiarEstado = async (id, sel) => { try { await updateDoc(doc(db,"solicitudes",id), {estado:sel.value}); sel.className = `status-select ${sel.value.toLowerCase()}`; } catch(e) { mostrarFeedback("Error", "No se cambió el estado", true); } };
 window.editarNotificacion = (id, txt) => { idCarpetaEditando = id; document.getElementById('txtNotificacion').value = (txt && txt!=='undefined') ? txt : ''; document.getElementById('modalNotificacion').classList.remove('hidden'); };
