@@ -84,7 +84,7 @@
                         <div class="empty-placeholder">Sin alertas activas</div>
                     </article>
                 
-                    <article class="treasury-article col-span-2">
+                    <article class="treasury-article col-span-2" style="display: flex; flex-direction: column;">
                         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
                             <h4 style="border:none; margin:0; padding:0;">Resumen Global</h4>
                             <span style="font-size:0.8rem; color:#666; background:#f0f0f0; padding:2px 8px; border-radius:4px;">Histórico</span>
@@ -118,6 +118,33 @@
                             </div>
                     
                         </div>
+                    
+                        <div class="global-divider"></div>
+                    
+                        <div id="contenedorGlobalInferior" class="global-stats-row">
+    
+                            <div class="stat-box">
+                                <span class="stat-label">Total Histórico Abonado</span>
+                                <strong id="globalTotalPagado" class="stat-value-xl text-outflow">Calculando...</strong>
+                                <small class="stat-hint">Intereses + Capital devuelto</small>
+                            </div>
+                        
+                            <div class="stat-divider-vert"></div>
+                        
+                            <div class="stat-box">
+                                <span class="stat-label" style="opacity:0.3">Disponible</span>
+                                <div class="empty-placeholder-icon" style="opacity:0.2; font-size:1.5rem;">—</div>
+                            </div>
+                        
+                            <div class="stat-divider-vert"></div>
+                        
+                            <div class="stat-box">
+                                <span class="stat-label" style="opacity:0.3">Disponible</span>
+                                <div class="empty-placeholder-icon" style="opacity:0.2; font-size:1.5rem;">—</div>
+                            </div>
+                        
+                        </div>
+                    
                     </article>
                 
                 </div>

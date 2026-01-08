@@ -850,33 +850,52 @@ function calcularTesoreriaDashboard() {
 }
 
 function actualizarResumenGlobal() {
-    // Si no hay datos, salimos
     if (!datosAgrupados || datosAgrupados.length === 0) return;
 
     let capitalGlobal = 0;
     let totalCarpetas = 0;
     let totalActivas = 0;
-    
-    // Iteramos sobre los clientes (datosAgrupados ya tiene la suma interna de cada cliente)
-    datosAgrupados.forEach(cliente => {
-        // 1. Sumamos Capital (Base + Reingresos ya está en capitalTotal del cliente)
-        capitalGlobal += cliente.capitalTotal;
+    let totalAbonadoHistorico = 0; // Nueva variable acumuladora
 
-        // 2. Sumamos Carpetas
+    // 1. Recorremos Clientes
+    datosAgrupados.forEach(cliente => {
+        capitalGlobal += cliente.capitalTotal;
         totalCarpetas += cliente.listaCarpetas.length;
         totalActivas += cliente.carpetasActivas;
+
+        // 2. Recorremos las carpetas de cada cliente para sumar pagos realizados
+        cliente.listaCarpetas.forEach(sol => {
+            // Si no tiene pagos marcados, saltamos
+            if (!sol.pagosRealizados || sol.pagosRealizados.length === 0) return;
+
+            // Calculamos el plan de pagos de esta carpeta
+            const planPagos = calcularPagosSimples(sol);
+
+            // Sumamos SOLO las cuotas que están en el array de realizados
+            planPagos.forEach(cuota => {
+                if (sol.pagosRealizados.includes(cuota.key)) {
+                    totalAbonadoHistorico += cuota.monto;
+                }
+            });
+        });
     });
 
-    // 3. Renderizamos en el DOM
+    // 3. Renderizamos DOM
     const elCapital = document.getElementById('globalCapital');
     const elActivas = document.getElementById('globalCarpetasActivas');
     const elTotalCarpetas = document.getElementById('globalCarpetasTotal');
     const elClientes = document.getElementById('globalClientes');
+    
+    // Nuevo Elemento
+    const elTotalPagado = document.getElementById('globalTotalPagado');
 
     if (elCapital) elCapital.textContent = formatearMoneda(capitalGlobal);
     if (elActivas) elActivas.textContent = totalActivas;
     if (elTotalCarpetas) elTotalCarpetas.textContent = `de ${totalCarpetas} Totales`;
     if (elClientes) elClientes.textContent = datosAgrupados.length;
+    
+    // Inyectamos el total histórico en rojo
+    if (elTotalPagado) elTotalPagado.textContent = formatearMoneda(totalAbonadoHistorico);
 }
 
 // Evento para abrir el modal (Solo lista)

@@ -944,3 +944,30 @@ body { background-color: var(--admin-bg); }
     }
     .stat-value-lg { font-size: 1.5rem; }
 }
+
+/* Divisor horizontal suave entre las dos secciones de la tarjeta */
+.global-divider {
+    height: 1px;
+    background-color: #f0f0f0; /* Muy sutil */
+    margin: 20px 0; /* Espaciado generoso arriba y abajo */
+    width: 100%;
+}
+
+
+
+
+/* Tipografía XL para números impactantes */
+.stat-value-xl {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 2rem; 
+    font-weight: 800;
+    line-height: 1.1;
+    display: block;
+    margin-bottom: 2px;
+    /* Eliminamos cualquier text-align aquí para que herede el center del padre */
+}
+
+/* Color Rojo para Salidas (Outflow) */
+.text-outflow {
+    color: #c62828; /* Rojo financiero estándar */
+}
