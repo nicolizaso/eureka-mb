@@ -119,6 +119,7 @@ async function cargarBaseDeDatos() {
 
         datosAgrupados = Object.values(mapa);
         calcularTesoreriaDashboard();
+        actualizarResumenGlobal();
         console.log("Datos actualizados correctamente (con Cuotas Manuales).");
 
     } catch (e) {
@@ -848,6 +849,36 @@ function calcularTesoreriaDashboard() {
     }
 }
 
+function actualizarResumenGlobal() {
+    // Si no hay datos, salimos
+    if (!datosAgrupados || datosAgrupados.length === 0) return;
+
+    let capitalGlobal = 0;
+    let totalCarpetas = 0;
+    let totalActivas = 0;
+    
+    // Iteramos sobre los clientes (datosAgrupados ya tiene la suma interna de cada cliente)
+    datosAgrupados.forEach(cliente => {
+        // 1. Sumamos Capital (Base + Reingresos ya está en capitalTotal del cliente)
+        capitalGlobal += cliente.capitalTotal;
+
+        // 2. Sumamos Carpetas
+        totalCarpetas += cliente.listaCarpetas.length;
+        totalActivas += cliente.carpetasActivas;
+    });
+
+    // 3. Renderizamos en el DOM
+    const elCapital = document.getElementById('globalCapital');
+    const elActivas = document.getElementById('globalCarpetasActivas');
+    const elTotalCarpetas = document.getElementById('globalCarpetasTotal');
+    const elClientes = document.getElementById('globalClientes');
+
+    if (elCapital) elCapital.textContent = formatearMoneda(capitalGlobal);
+    if (elActivas) elActivas.textContent = totalActivas;
+    if (elTotalCarpetas) elTotalCarpetas.textContent = `de ${totalCarpetas} Totales`;
+    if (elClientes) elClientes.textContent = datosAgrupados.length;
+}
+
 // Evento para abrir el modal (Solo lista)
 document.getElementById('btnAbrirTesoreria').addEventListener('click', () => {
     // Ordenar alfabéticamente
@@ -918,15 +949,6 @@ document.getElementById('btnAbrirTesoreria').addEventListener('click', () => {
     // C. ACTUALIZAR INTERFAZ (KPIs)
     const balance = totalIngresosMes - totalEgresosMes;
     
-    document.getElementById('kpiIngresos').textContent = formatearMoneda(totalIngresosMes);
-    document.getElementById('kpiEgresos').textContent = formatearMoneda(totalEgresosMes);
-    
-    const elBalance = document.getElementById('kpiBalance');
-    elBalance.textContent = formatearMoneda(balance);
-    // Color dinámico del balance
-    if(balance >= 0) elBalance.style.color = "#2e7d32"; // Verde
-    else elBalance.style.color = "#c62828"; // Rojo
-
     // D. RENDERIZAR LISTA DE PAGOS
     // Ordenar alfabéticamente por nombre
     itemsTesoreriaCache.sort((a, b) => a.folder.nombre.localeCompare(b.folder.nombre));

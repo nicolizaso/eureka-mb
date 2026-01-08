@@ -54,7 +54,7 @@
                 </div>
 
                 <div class="treasury-articles-grid">
-                    
+    
                     <article class="treasury-article">
                         <h4>Resumen Mensual</h4>
                         
@@ -73,27 +73,53 @@
                                 <strong id="cardBalance">$0</strong>
                             </div>
                         </div>
-
+                
                         <button id="btnAbrirTesoreria" class="btn-admin-primary full-width" style="margin-top:auto; font-size:0.85rem;">
                             Ver Detalle Cuotas
                         </button>
                     </article>
-
-                    <article class="treasury-article">
-                        <h4>Proyecciones</h4>
-                        <div class="empty-placeholder">Disponible</div>
-                    </article>
-
-                    <article class="treasury-article">
-                        <h4>Gastos Operativos</h4>
-                        <div class="empty-placeholder">Disponible</div>
-                    </article>
-
+                
                     <article class="treasury-article">
                         <h4>Alertas</h4>
-                        <div class="empty-placeholder">Disponible</div>
+                        <div class="empty-placeholder">Sin alertas activas</div>
                     </article>
-
+                
+                    <article class="treasury-article col-span-2">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                            <h4 style="border:none; margin:0; padding:0;">Resumen Global</h4>
+                            <span style="font-size:0.8rem; color:#666; background:#f0f0f0; padding:2px 8px; border-radius:4px;">Histórico</span>
+                        </div>
+                        
+                        <div id="contenedorResumenGlobal" class="global-stats-row">
+                            
+                            <div class="stat-box main-stat">
+                                <span class="stat-label">Capital Administrado</span>
+                                <strong id="globalCapital" class="stat-value-lg">Calculando...</strong>
+                                <small class="stat-hint">Capital Base + Reingresos</small>
+                            </div>
+                    
+                            <div class="stat-divider-vert"></div>
+                    
+                            <div class="stat-box">
+                                <span class="stat-label">Carpetas</span>
+                                <div class="stat-dual">
+                                    <strong id="globalCarpetasActivas" class="stat-value-md">-</strong>
+                                    <span class="stat-sub">Activas</span>
+                                </div>
+                                <small id="globalCarpetasTotal" class="stat-hint">de - Totales</small>
+                            </div>
+                    
+                            <div class="stat-divider-vert"></div>
+                    
+                            <div class="stat-box">
+                                <span class="stat-label">Cartera de Clientes</span>
+                                <strong id="globalClientes" class="stat-value-md">-</strong>
+                                <small class="stat-hint">Inversores Únicos</small>
+                            </div>
+                    
+                        </div>
+                    </article>
+                
                 </div>
             </div>
         </div>
