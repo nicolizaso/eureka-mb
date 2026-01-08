@@ -608,7 +608,7 @@ window.abrirHistorialPagos = (id) => {
     const modal = document.getElementById('modalPagosAdmin');
     document.getElementById('headerPagosInfo').innerHTML = `<h3 style="margin:0">Gestión Pagos</h3><p style="margin:0; color:#666">Carpeta #${c.carpeta}</p>`;
     
-    // 2. Calculamos los pagos (ahora incluye los manuales que cargamos en cargarBaseDeDatos)
+    // 2. Calculamos los pagos
     const pagos = calcularPagosSimples(c);
     const realizados = c.pagosRealizados || [];
     const lista = document.getElementById('listaPagosAdmin');
@@ -618,10 +618,21 @@ window.abrirHistorialPagos = (id) => {
 
     lista.innerHTML = '';
     
+    // --- NUEVO: Array de meses para el formato "Abr. 26" ---
+    const nombresMeses = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
     pagos.forEach((p, index) => {
         const done = realizados.includes(p.key);
-        const [a, m] = p.key.split('-');
         
+        // --- CAMBIO DE LÓGICA DE FECHA AQUÍ ---
+        const [anioFull, mesStr] = p.key.split('-'); // ej: "2025", "04"
+        const mesIndex = parseInt(mesStr); // ej: 4
+        const nombreMes = nombresMeses[mesIndex]; // ej: "Abr"
+        const anioCorto = anioFull.slice(2); // ej: "25"
+        
+        const fechaVisual = `${nombreMes}. ${anioCorto}`; // Resultado: "Abr. 25"
+        // ---------------------------------------
+
         let labelCuota;
         if (p.esCapital) {
             labelCuota = "Devolución Capital";
@@ -633,7 +644,6 @@ window.abrirHistorialPagos = (id) => {
         const claseCurrent = esMesActual ? 'current-month' : '';
         const clasePagada = done ? 'marked-paid' : '';
 
-        // ID único para identificar esta fila en el HTML
         const rowId = `row-${c.id}-${p.key}`;
 
         const row = document.createElement('div');
@@ -642,7 +652,7 @@ window.abrirHistorialPagos = (id) => {
         row.innerHTML = `
             <div class="payment-info" style="flex:1;">
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <span class="pay-date">${m}/${a.slice(2)}</span>
+                    <span class="pay-date" style="text-transform: capitalize;">${fechaVisual}</span>
                     <span style="font-size:0.8rem; color:#666; font-weight:600;">${labelCuota}</span>
                 </div>
                 

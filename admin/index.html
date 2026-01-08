@@ -268,22 +268,27 @@
     </div>
 
     <div id="modalTesoreria" class="overlay hidden">
-        <div class="popup" style="max-width: 900px;"> <div class="modal-header-row">
-            <h3>Tesorería & Cashflow</h3>
-            <span onclick="document.getElementById('modalTesoreria').classList.add('hidden')" class="close-x">&times;</span>
-        </div>
-        
-        <div style="padding: 15px 25px; background:#fff; border-bottom:1px solid #eee; margin-top: 10px;">
-            <input type="text" id="filtroTesoreria" class="admin-input" placeholder="🔍 Buscar pago por nombre o carpeta..." style="padding:10px; font-size:0.95rem;">
-        </div>
-
-        <div id="listaTesoreria" class="admin-payments-list" style="padding:20px; max-height: 450px; background-color: #f9fafb;">
+        <div class="popup" style="max-width: 900px;">
+            <div class="modal-header-row">
+                <h3>Tesorería & Cashflow</h3>
+                <span onclick="document.getElementById('modalTesoreria').classList.add('hidden')" class="close-x">&times;</span>
             </div>
-        
-        <div style="margin-top: 15px; text-align: right; padding: 0 25px 20px 25px;">
-            <button onclick="document.getElementById('modalTesoreria').classList.add('hidden')" class="btn-admin-outline">Cerrar Panel</button>
+            
+            <div style="padding: 15px 25px; background:#fff; border-bottom:1px solid #eee;">
+                <p style="margin:0 0 10px 0; font-size:0.9rem; color:#666;">
+                    Total a liquidar este mes: <strong id="totalTesoreriaModal" style="color:var(--admin-accent); font-size:1.1rem;">-</strong>
+                </p>
+                
+                <input type="text" id="filtroTesoreria" class="admin-input" placeholder="🔍 Buscar pago por nombre o carpeta..." style="padding:10px; font-size:0.95rem;">
+            </div>
+
+            <div id="listaTesoreria" class="admin-payments-list" style="padding:20px; max-height: 450px; background-color: #f9fafb;">
+                </div>
+            
+            <div style="margin-top: 15px; text-align: right; padding: 0 25px 20px 25px;">
+                <button onclick="document.getElementById('modalTesoreria').classList.add('hidden')" class="btn-admin-outline">Cerrar</button>
+            </div>
         </div>
-    </div>
     </div>
     <script type="module" src="main.js"></script>
 </body>
