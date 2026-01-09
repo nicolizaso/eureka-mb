@@ -4,6 +4,7 @@ import { doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc } fro
 import { formatearMoneda, formatearFecha, formatearPorcentaje, mostrarNotificacion } from '../assets/js/utils.js';
 
 let usuarioActual = null;
+const FECHA_CORTE_LEGACY = '2025-12';
 
 // --- HELPER UI ---
 function setText(id, text) {
@@ -104,75 +105,102 @@ function cargarDatosPerfil() {
 // ======================================================
 // 3. CARGA DE INVERSIONES (OPTIMIZADA CON CACHÉ)
 // ======================================================
+// ======================================================
+// 3. CARGA DE INVERSIONES (CON TTL Y REFRESH)
+// ======================================================
 async function cargarInversiones(forzarRecarga = false) {
     const gridContainer = document.getElementById('gridInversiones');
     const mensajeVacio = document.getElementById('mensajeSinInversiones');
+    const btnRefresh = document.getElementById('btnRefrescarInversiones');
     
-    // Limpiamos grid visualmente
+    // Animación del botón refresh si se fuerza la recarga
+    if(forzarRecarga && btnRefresh) {
+        btnRefresh.style.animation = "spin 1s linear infinite";
+        btnRefresh.disabled = true;
+    }
+
     if(gridContainer) gridContainer.innerHTML = "";
     
     let solicitudesTotales = [];
-
-    // --- ESTRATEGIA DE CACHÉ ---
-    // Creamos una clave única para este usuario. Si cambia de usuario, cambia la clave.
     const CACHE_KEY = `inversiones_cache_${usuarioActual.uid}`;
+    // TIEMPO DE VIDA DEL CACHÉ: 15 Minutos (en milisegundos)
+    const CACHE_TTL = 15 * 60 * 1000; 
     
-    // 1. Intentamos leer del caché primero
-    const cachedData = sessionStorage.getItem(CACHE_KEY);
+    // 1. Intentamos leer del caché
+    const cachedRaw = sessionStorage.getItem(CACHE_KEY);
     
-    // Si hay datos en caché Y NO estamos forzando la recarga, usamos lo guardado.
-    if (!forzarRecarga && cachedData) {
-        console.log("⚡ [CACHE] Usando datos locales (Ahorro de lecturas activado)");
-        solicitudesTotales = JSON.parse(cachedData);
-        
-        // Renderizamos directo desde memoria y salimos
-        procesarYRenderizar(solicitudesTotales, mensajeVacio);
-        return; 
+    let usarCache = false;
+
+    if (!forzarRecarga && cachedRaw) {
+        try {
+            const cacheObj = JSON.parse(cachedRaw);
+            const ahora = Date.now();
+            
+            // Verificamos si el caché es válido y no ha expirado
+            if (cacheObj.timestamp && (ahora - cacheObj.timestamp < CACHE_TTL)) {
+                console.log("⚡ [CACHE] Usando datos locales (Válidos por " + ((CACHE_TTL - (ahora - cacheObj.timestamp))/60000).toFixed(1) + " min más)");
+                solicitudesTotales = cacheObj.data;
+                usarCache = true;
+            } else {
+                console.log("⏰ [CACHE] Expirado. Descargando nuevos datos...");
+            }
+        } catch(e) {
+            console.warn("Error leyendo caché, forzando recarga.");
+        }
     }
 
-    // 2. Si no hay caché o forzamos, vamos a Firebase
+    // Si el caché es válido, renderizamos y salimos
+    if (usarCache) {
+        procesarYRenderizar(solicitudesTotales, mensajeVacio);
+        return;
+    }
+
+    // 2. Si no hay caché válido, vamos a Firebase
     try {
-        console.log("🔥 [FIREBASE] Descargando datos de la nube...");
+        console.log("🔥 [FIREBASE] Descargando datos frescos...");
 
         if (!usuarioActual || !usuarioActual.dni) {
-            console.warn("Usuario sin DNI, no se puede consultar.");
             if(mensajeVacio) mensajeVacio.classList.remove('hidden');
             return;
         }
 
-        // Query segura por DNI
-        const q = query(
-            collection(db, "solicitudes"), 
-            where("dni", "==", usuarioActual.dni)
-        );
-
+        const q = query(collection(db, "solicitudes"), where("dni", "==", usuarioActual.dni));
         const querySnapshot = await getDocs(q);
 
-        // Procesamos resultados
         for (const docSnap of querySnapshot.docs) {
             const data = docSnap.data();
             const solicitud = { ...data, id: docSnap.id };
-
-            // Subcolección Reingresos
             const reingresosSnap = await getDocs(collection(docSnap.ref, "reingresos"));
             solicitud.reingresos = reingresosSnap.docs.map(r => r.data());
-            
             solicitudesTotales.push(solicitud);
         }
 
-        // 3. GUARDAMOS EN CACHÉ antes de terminar
-        // Guardamos el array completo como texto JSON en la memoria del navegador
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify(solicitudesTotales));
-        console.log("💾 [CACHE] Datos guardados en memoria para futuras recargas.");
+        // 3. GUARDAMOS EN CACHÉ CON TIMESTAMP
+        const cacheData = {
+            timestamp: Date.now(),
+            data: solicitudesTotales
+        };
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
 
-        // 4. Renderizamos
         procesarYRenderizar(solicitudesTotales, mensajeVacio);
 
     } catch (error) { 
         console.error("Error cargando inversiones:", error);
-        mostrarNotificacion("Error de conexión con la base de datos", "error");
+        mostrarNotificacion("Error de conexión", "error");
+    } finally {
+        // Detener animación del botón refresh
+        if(btnRefresh) {
+            btnRefresh.style.animation = "none";
+            btnRefresh.disabled = false;
+        }
     }
 }
+
+// --- LISTENER DEL BOTÓN REFRESH ---
+// Agrega esto al final del archivo o en la sección de listeners
+document.getElementById('btnRefrescarInversiones')?.addEventListener('click', () => {
+    cargarInversiones(true); // true = Forzar recarga (ignorar caché)
+});
 
 // --- HELPER DE RENDERIZADO (Para no repetir código) ---
 function procesarYRenderizar(lista, elementoMensaje) {
@@ -199,7 +227,6 @@ function procesarYRenderizar(lista, elementoMensaje) {
 // 4. CÁLCULO DE KPIs (DASHBOARD SUPERIOR)
 // ======================================================
 function calcularKpis(solicitudes) {
-    // Filtro de seguridad adicional (aunque la query ya filtró)
     const propias = solicitudes.filter(s => s.dni === usuarioActual.dni);
     
     if (propias.length === 0) { 
@@ -208,7 +235,6 @@ function calcularKpis(solicitudes) {
     }
 
     const hoy = new Date();
-    // Claves para agrupar pagos: "YYYY-MM"
     const mesActualKey = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
     const mesPasadoDate = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
     const mesPasadoKey = `${mesPasadoDate.getFullYear()}-${String(mesPasadoDate.getMonth() + 1).padStart(2, '0')}`;
@@ -219,9 +245,7 @@ function calcularKpis(solicitudes) {
     let carpetasEsteMes=new Set();
 
     propias.forEach(s => {
-        // Limpieza de datos numéricos (Capital)
         const capitalNum = parseFloat(String(s.capital).replace(/[^\d,.-]/g, '').replace(',', '.'));
-        // Sumamos reingresos al capital total invertido si existen
         let capitalAcumulado = capitalNum;
         if(s.reingresos) {
             s.reingresos.forEach(r => {
@@ -233,35 +257,38 @@ function calcularKpis(solicitudes) {
         totalInvertido += capitalAcumulado; 
         sumaTasas += tasaNum;
 
-        // Proyección de pagos
+        // --- VALIDACIÓN DE ESTADO ---
+        // Solo las carpetas ACTIVAS suman para el futuro.
+        const estadoNorm = s.estado ? s.estado.toLowerCase() : 'activa';
+        const esCarpetaActiva = estadoNorm === 'activa'; 
+
         const pagos = calcularPagosSimples(s);
         pagos.forEach(p => {
+            // Histórico (siempre suma)
             if (p.key === mesActualKey) { 
                 totalEsteMes += p.monto; 
                 carpetasEsteMes.add(s.carpeta); 
             }
-            if (p.key === mesPasadoKey) {
-                totalMesPasado += p.monto;
-            }
-            if (p.key <= mesActualKey) {
-                totalGenerado += p.monto;
-            }
+            if (p.key === mesPasadoKey) totalMesPasado += p.monto;
+            if (p.key <= mesActualKey) totalGenerado += p.monto;
+
+            // Futuro (Solo si es ACTIVA)
             if (p.key > mesActualKey) { 
-                totalRestante += p.monto; 
-                todosLosPagosFuturosPlana.push({ ...p, carpeta: s.carpeta }); 
-            }
-            // Mapa para "Próximo cobro"
-            if (p.key >= mesActualKey) {
-                if (!mapaPagosFuturos[p.key]) mapaPagosFuturos[p.key] = { monto: 0, carpetas: new Set() };
-                mapaPagosFuturos[p.key].monto += p.monto;
-                mapaPagosFuturos[p.key].carpetas.add(s.carpeta);
+                if (esCarpetaActiva) {
+                    totalRestante += p.monto; 
+                    todosLosPagosFuturosPlana.push({ ...p, carpeta: s.carpeta }); 
+                    
+                    if (!mapaPagosFuturos[p.key]) mapaPagosFuturos[p.key] = { monto: 0, carpetas: new Set() };
+                    mapaPagosFuturos[p.key].monto += p.monto;
+                    mapaPagosFuturos[p.key].carpetas.add(s.carpeta);
+                }
             }
         });
     });
 
     const promedioTasa = propias.length > 0 ? (sumaTasas / propias.length) : 0;
     
-    // Cálculo de Break Even (Punto de equilibrio)
+    // Break Even
     todosLosPagosFuturosPlana.sort((a, b) => a.key.localeCompare(b.key));
     let acumuladoSimulado = totalGenerado;
     let cuotasFaltantesParaBreakEven = 0;
@@ -286,7 +313,6 @@ function renderKpiCards(esteMes, mesPasado, capital, recuperado, restante, tasaP
     setText('lblMesActual', mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1));
     setText('dashTotalMes', formatearMoneda(esteMes));
 
-    // Badge Tendencia (Mes actual vs Mes pasado)
     const badgeComp = document.getElementById('badgeComparacion');
     if(badgeComp) {
         const diff = esteMes - mesPasado;
@@ -310,13 +336,11 @@ function renderKpiCards(esteMes, mesPasado, capital, recuperado, restante, tasaP
     setText('kpiGenerado', formatearMoneda(recuperado));
     setText('kpiRestante', formatearMoneda(restante));
 
-    // Barra de Recupero
+    // Barra de Recupero (Lógica standard)
     const pct = capital > 0 ? (recuperado / capital) * 100 : 0;
     setText('lblPorcentajeRecupero', pct.toFixed(1) + '%');
-    
     const barFill = document.getElementById('barRecupero');
     if(barFill) barFill.style.width = Math.min(pct, 100) + '%';
-    
     const lblMensaje = document.getElementById('lblMensajeRecupero');
     if(lblMensaje && barFill) {
         if (pct >= 100) { 
@@ -331,27 +355,57 @@ function renderKpiCards(esteMes, mesPasado, capital, recuperado, restante, tasaP
         }
     }
 
-    // Próximo Cobro
-    const fechasOrdenadas = Object.keys(mapaFuturos).sort();
-    if (fechasOrdenadas.length > 0) {
-        const keyProx = fechasOrdenadas[0];
-        const datosProx = mapaFuturos[keyProx];
-        const [a, m] = keyProx.split('-');
-        const nMes = new Date(a, m - 1, 1).toLocaleString('es-ES', { month: 'long' });
-        
-        setText('dashProximoMonto', formatearMoneda(datosProx.monto));
-        setText('dashProximoFecha', `${nMes.charAt(0).toUpperCase() + nMes.slice(1)} ${a}`);
-        
-        const bdg = document.getElementById('dashProximaCarpeta');
-        if(bdg) { 
-            bdg.textContent = `Carpetas: ${Array.from(datosProx.carpetas).join('; ')}`; 
-            bdg.classList.remove('hidden'); 
+    // --- LÓGICA DE VISUALIZACIÓN (LEGACY VS NUEVO) ---
+    // Determinamos si es un usuario con carpetas viejas basándonos en si definimos la constante de corte
+    const MODO_LEGACY = (typeof FECHA_CORTE_LEGACY !== 'undefined'); 
+
+    const cardProximo = document.getElementById('cardProximoCobro');
+    const cardResumen = document.getElementById('cardResumen');
+    const boxRestante = document.getElementById('boxRestante');
+    const boxRecupero = document.getElementById('boxRecupero');
+
+    if (MODO_LEGACY) {
+        // 1. OCULTAR Tarjeta "Próximo Cobro"
+        if (cardProximo) cardProximo.classList.add('hidden-layout');
+
+        // 2. AJUSTAR Tarjeta "Resumen" (Quitar full-height)
+        if (cardResumen) {
+            cardResumen.classList.remove('full-height-card');
+            cardResumen.style.height = 'auto'; 
+            cardResumen.style.minHeight = '250px'; // Misma altura base que Novedades
         }
+
+        // 3. OCULTAR métricas internas (Restante y Barra)
+        if (boxRestante) boxRestante.classList.add('hidden-layout');
+        if (boxRecupero) boxRecupero.classList.add('hidden-layout');
+
+        // Ajuste cosmético de la grilla de métricas para rellenar huecos
+        const metricsGrid = document.querySelector('.metrics-grid');
+        if(metricsGrid) metricsGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(30%, 1fr))';
+
     } else {
-        setText('dashProximoMonto', "Finalizado"); 
-        setText('dashProximoFecha', "-");
-        const bdg = document.getElementById('dashProximaCarpeta'); 
-        if(bdg) bdg.classList.add('hidden');
+        // --- MODO STANDARD (Mostrar Próximo Cobro) ---
+        const fechasOrdenadas = Object.keys(mapaFuturos).sort();
+        if (fechasOrdenadas.length > 0) {
+             const keyProx = fechasOrdenadas[0];
+             const datosProx = mapaFuturos[keyProx];
+             const [a, m] = keyProx.split('-');
+             const nMes = new Date(a, m - 1, 1).toLocaleString('es-ES', { month: 'long' });
+             
+             setText('dashProximoMonto', formatearMoneda(datosProx.monto));
+             setText('dashProximoFecha', `${nMes.charAt(0).toUpperCase() + nMes.slice(1)} ${a}`);
+             
+             const bdg = document.getElementById('dashProximaCarpeta');
+             if(bdg) { 
+                 bdg.textContent = `Carpetas: ${Array.from(datosProx.carpetas).join('; ')}`; 
+                 bdg.classList.remove('hidden'); 
+             }
+        } else {
+             setText('dashProximoMonto', "Finalizado"); 
+             setText('dashProximoFecha', "-");
+             const bdg = document.getElementById('dashProximaCarpeta'); 
+             if(bdg) bdg.classList.add('hidden');
+        }
     }
 }
 
@@ -488,11 +542,29 @@ window.toggleNotificacion = (id) => {
 // ======================================================
 function abrirModalDetalle(solicitud) {
     const popup = document.getElementById('popupOverlay');
-    const pagos = calcularPagosSimples(solicitud);
+    
+    // CAMBIO 1: Usamos 'let' en lugar de 'const' para poder filtrar el array
+    let pagos = calcularPagosSimples(solicitud); 
     const totalCuotasReales = parseInt(solicitud.periodos);
     
     // Obtenemos los pagos marcados como realizados por el admin
     const realizados = solicitud.pagosRealizados || []; // Array de keys 'YYYY-MM'
+
+    // --- LÓGICA LEGACY: FILTRADO Y TBD ---
+    // Definimos la fecha de corte (si no está la variable global, usa '2025-12' por seguridad)
+    const fechaCorte = (typeof FECHA_CORTE_LEGACY !== 'undefined') ? FECHA_CORTE_LEGACY : '2025-12';
+
+    // 1. Filtramos: Solo pasan cuotas anteriores a la fecha de corte O la devolución de capital
+    pagos = pagos.filter(p => p.key <= fechaCorte || p.esCapital);
+
+    // 2. Modificamos Capital: Si es Capital, forzamos la fecha visual a TBD
+    pagos.forEach(p => {
+        if (p.esCapital) {
+            p.fechaVisual = 'TBD'; // Bandera visual
+            p.textoCentroOverride = 'Devolución de Capital (A definir)';
+        }
+    });
+    // -------------------------------------
 
     let htmlHeader = `
         <div class="modal-header-row">
@@ -509,12 +581,25 @@ function abrirModalDetalle(solicitud) {
     const hoyKey = new Date().toISOString().slice(0, 7);
     
     pagos.forEach((p, index) => {
-        const [anio, mes] = p.key.split('-');
-        const fechaCorta = `${mes}/${anio.slice(2)}`; 
+        // Lógica de visualización de fecha (CAMBIO 2: Soporte para TBD)
+        let fechaMostrar;
+        if (p.fechaVisual === 'TBD') {
+            fechaMostrar = '<span style="font-weight:800; color:var(--accent);">TBD</span>';
+        } else {
+            const [anio, mes] = p.key.split('-');
+            fechaMostrar = `${mes}/${anio.slice(2)}`;
+        }
         
         let textoCentro;
-        if (p.esCapital) textoCentro = "Devolución de Capital";
-        else textoCentro = `Cuota ${index + 1} / ${totalCuotasReales}`;
+        // (CAMBIO 3: Prioridad al texto override si existe)
+        if (p.textoCentroOverride) {
+            textoCentro = p.textoCentroOverride;
+        } else if (p.esCapital) {
+            textoCentro = "Devolución de Capital";
+        } else {
+            // Simplificamos el texto ya que cortamos el total de cuotas visibles
+            textoCentro = `Cuota ${index + 1}`; 
+        }
 
         // LÓGICA DE ESTADO
         let claseCard = '';
@@ -522,18 +607,20 @@ function abrirModalDetalle(solicitud) {
 
         if (esPagada) {
             claseCard = 'paid'; // Verde
-        } else if (p.key === hoyKey) {
+        } else if (p.key === hoyKey && !p.esCapital) {
             claseCard = 'current'; // Borde destacado
             textoCentro = "Pago en Curso";
-        } else if (p.key < hoyKey) {
+        } else if (p.key < hoyKey && !p.esCapital) {
             claseCard = 'pending'; // Pendiente/Atrasado
         } else {
             claseCard = 'pending'; // Futuro
+            // Si es Capital TBD, le damos un estilo visual distinto (opcional)
+            if(p.fechaVisual === 'TBD') claseCard = 'future-capital';
         }
         
         htmlLista += `
             <div class="quota-card ${claseCard}">
-                <div class="quota-col left"><span class="q-date">${fechaCorta}</span></div>
+                <div class="quota-col left"><span class="q-date">${fechaMostrar}</span></div>
                 <div class="quota-col center"><span class="q-date" style="font-weight:600; font-size:0.95rem;">${textoCentro}</span></div>
                 <div class="quota-col right"><span class="q-amount">${formatearMoneda(p.monto)}</span></div>
             </div>
@@ -568,11 +655,6 @@ function calcularPagosSimples(solicitud) {
     // Limpieza de datos
     const cap = parseFloat(String(capital).replace(/[^\d,.-]/g, '').replace(',', '.'));
     
-    // Verificamos si hay reingresos para ajustar la base de cálculo de intereses si corresponde
-    // NOTA: Si el interés se calcula sobre el total acumulado, deberíamos sumar reingresos aquí.
-    // Asumiremos modelo simple: Interés sobre capital inicial + Interés sobre reingresos por separado
-    // Pero para simplificar la visualización de tabla, usaremos el capital base + reingresos como un total plano por ahora
-    // OJO: Si tu lógica de negocio es compleja, ajusta esto.
     let capitalTotalCalculo = cap;
     if(solicitud.reingresos) {
         solicitud.reingresos.forEach(r => {

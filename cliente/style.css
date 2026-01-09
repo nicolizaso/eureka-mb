@@ -1646,3 +1646,52 @@ input::placeholder {
     height: 18px;
     stroke-width: 2;
 }
+
+/* --- ESTILO BOTÓN REFRESH --- */
+.header-actions-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-refresh-icon {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-refresh-icon:hover {
+    background-color: var(--bg-secondary);
+    color: var(--primary);
+    transform: rotate(180deg);
+    box-shadow: 0 0 0 4px rgba(0,0,0,0.05);
+}
+
+.btn-refresh-icon:active {
+    transform: scale(0.9);
+}
+
+/* Animación de carga */
+@keyframes spin-smooth { 
+    100% { transform: rotate(360deg); } 
+}
+
+.spinning {
+    animation: spin-smooth 1s linear infinite;
+    pointer-events: none;
+    color: var(--accent);
+}
+
+/* --- UTILIDAD LAYOUT --- */
+.hidden-layout {
+    display: none !important;
+}

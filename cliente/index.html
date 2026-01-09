@@ -90,7 +90,7 @@
         <div class="dashboard-grid desktop-row">
             
             <div class="left-column">
-                <div class="card stat-card">
+                <div id="cardProximoCobro" class="card stat-card">
                     <div class="stat-header">
                         <span class="stat-title">Próximo Cobro</span>
                         <span class="icon-calendar" style="font-size: 1.2rem;">📅</span>
@@ -117,7 +117,7 @@
                 </div>
             </div>
 
-            <div class="card stat-card full-height-card">
+            <div id="cardResumen" class="card stat-card full-height-card">
                 <div class="stat-header">
                     <span class="stat-title">Resumen de Inversiones</span>
                     <span class="icon-chart" style="font-size: 1.2rem;">📊</span>
@@ -136,13 +136,14 @@
                         <span class="metric-label">Capital Generado (Cobrado)</span>
                         <span class="metric-value success-text" id="kpiGenerado">-</span>
                     </div>
-                    <div class="metric-item">
+                    
+                    <div class="metric-item" id="boxRestante">
                         <span class="metric-label">Restante por Cobrar</span>
                         <span class="metric-value" id="kpiRestante">-</span>
                     </div>
                 </div>
-
-                <div class="recovery-section">
+                
+                <div class="recovery-section" id="boxRecupero">
                     <div class="progress-labels">
                         <span id="lblEstadoRecupero">Progreso de Recupero</span>
                         <span id="lblPorcentajeRecupero">0%</span>
@@ -157,7 +158,12 @@
 
         <div class="card section-container">
             <div class="section-header">
-                <h3>Mis Inversiones</h3>
+                <div class="header-actions-row">
+                    <h3>Mis Inversiones</h3>
+                    <button id="btnRefrescarInversiones" class="btn-refresh-icon" title="Actualizar datos">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                </div>
                 <button id="btnAgregarCarpeta" class="btn-small">+ Vincular Carpeta</button>
             </div>
 
