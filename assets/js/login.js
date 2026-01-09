@@ -148,8 +148,8 @@ registerForm?.addEventListener('submit', async (e) => {
 
     try {
         mostrarNotificacion("Verificando...", "neutral");
-        const dniExiste = await verificarDniExistente(dni);
-        if (dniExiste) throw new Error("El DNI ya está registrado.");
+        //const dniExiste = await verificarDniExistente(dni);
+        //if (dniExiste) throw new Error("El DNI ya está registrado.");
 
         const userCredential = await createUserWithEmailAndPassword(auth, mail, password);
         const user = userCredential.user;

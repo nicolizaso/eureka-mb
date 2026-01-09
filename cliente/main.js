@@ -101,26 +101,46 @@ function cargarDatosPerfil() {
 // ======================================================
 // 3. CARGA DE INVERSIONES (CORE FIX)
 // ======================================================
-async function cargarInversiones() {
+// ======================================================
+// 3. CARGA DE INVERSIONES (OPTIMIZADA CON CACHÉ)
+// ======================================================
+async function cargarInversiones(forzarRecarga = false) {
     const gridContainer = document.getElementById('gridInversiones');
     const mensajeVacio = document.getElementById('mensajeSinInversiones');
     
-    // Limpiamos grid antes de cargar
+    // Limpiamos grid visualmente
     if(gridContainer) gridContainer.innerHTML = "";
     
-    const solicitudesTotales = [];
+    let solicitudesTotales = [];
 
+    // --- ESTRATEGIA DE CACHÉ ---
+    // Creamos una clave única para este usuario. Si cambia de usuario, cambia la clave.
+    const CACHE_KEY = `inversiones_cache_${usuarioActual.uid}`;
+    
+    // 1. Intentamos leer del caché primero
+    const cachedData = sessionStorage.getItem(CACHE_KEY);
+    
+    // Si hay datos en caché Y NO estamos forzando la recarga, usamos lo guardado.
+    if (!forzarRecarga && cachedData) {
+        console.log("⚡ [CACHE] Usando datos locales (Ahorro de lecturas activado)");
+        solicitudesTotales = JSON.parse(cachedData);
+        
+        // Renderizamos directo desde memoria y salimos
+        procesarYRenderizar(solicitudesTotales, mensajeVacio);
+        return; 
+    }
+
+    // 2. Si no hay caché o forzamos, vamos a Firebase
     try {
-        // VALIDACIÓN CRÍTICA: Necesitamos el DNI para la query segura
+        console.log("🔥 [FIREBASE] Descargando datos de la nube...");
+
         if (!usuarioActual || !usuarioActual.dni) {
-            console.warn("El usuario no tiene DNI en su perfil. No se pueden buscar carpetas.");
+            console.warn("Usuario sin DNI, no se puede consultar.");
             if(mensajeVacio) mensajeVacio.classList.remove('hidden');
             return;
         }
 
-        // --- QUERY SEGURA (FIX) ---
-        // Solicitamos SOLO los documentos donde dni == usuarioActual.dni
-        // Esto cumple con la regla: allow read: if resource.data.dni == user.dni
+        // Query segura por DNI
         const q = query(
             collection(db, "solicitudes"), 
             where("dni", "==", usuarioActual.dni)
@@ -128,43 +148,50 @@ async function cargarInversiones() {
 
         const querySnapshot = await getDocs(q);
 
-        // Procesamos cada carpeta encontrada
+        // Procesamos resultados
         for (const docSnap of querySnapshot.docs) {
             const data = docSnap.data();
             const solicitud = { ...data, id: docSnap.id };
 
-            // Buscamos subcolección de Reingresos (Capital compuesto)
-            // Esto está permitido por las reglas porque ya verificamos que el padre es nuestro
-            const reingresosRef = collection(docSnap.ref, "reingresos");
-            const reingresosSnap = await getDocs(reingresosRef);
-            
+            // Subcolección Reingresos
+            const reingresosSnap = await getDocs(collection(docSnap.ref, "reingresos"));
             solicitud.reingresos = reingresosSnap.docs.map(r => r.data());
             
             solicitudesTotales.push(solicitud);
         }
 
-        // Ordenamos por fecha (Más reciente primero)
-        solicitudesTotales.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        // 3. GUARDAMOS EN CACHÉ antes de terminar
+        // Guardamos el array completo como texto JSON en la memoria del navegador
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(solicitudesTotales));
+        console.log("💾 [CACHE] Datos guardados en memoria para futuras recargas.");
 
-        // Renderizado
-        if (solicitudesTotales.length === 0) {
-            if(mensajeVacio) mensajeVacio.classList.remove('hidden');
-        } else {
-            if(mensajeVacio) mensajeVacio.classList.add('hidden');
-            
-            // Dibujar cada tarjeta
-            solicitudesTotales.forEach(renderFilaInversion);
-            
-            // Calcular totales del Dashboard
-            calcularKpis(solicitudesTotales);
-            
-            // Cargar notificaciones/mensajes del admin
-            cargarNotificaciones(solicitudesTotales);
-        }
+        // 4. Renderizamos
+        procesarYRenderizar(solicitudesTotales, mensajeVacio);
 
     } catch (error) { 
         console.error("Error cargando inversiones:", error);
         mostrarNotificacion("Error de conexión con la base de datos", "error");
+    }
+}
+
+// --- HELPER DE RENDERIZADO (Para no repetir código) ---
+function procesarYRenderizar(lista, elementoMensaje) {
+    if (lista.length === 0) {
+        if(elementoMensaje) elementoMensaje.classList.remove('hidden');
+    } else {
+        if(elementoMensaje) elementoMensaje.classList.add('hidden');
+        
+        // Ordenar por fecha
+        lista.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        
+        // Dibujar tarjetas
+        lista.forEach(renderFilaInversion);
+        
+        // Calcular Dashboard
+        calcularKpis(lista);
+        
+        // Notificaciones
+        cargarNotificaciones(lista);
     }
 }
 

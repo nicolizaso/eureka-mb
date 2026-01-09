@@ -47,84 +47,143 @@ async function initAdmin() {
 // ======================================================
 // 2. CARGA DE BASE DE DATOS (ACTUALIZADO)
 // ======================================================
-async function cargarBaseDeDatos() {
+// ======================================================
+// 2. CARGA DE DATOS (OPTIMIZADA CON CACHÉ)
+// ======================================================
+async function cargarBaseDeDatos(forzarRecarga = false) {
+    mostrarCargando(true);
+    
+    const CACHE_KEY = 'admin_full_db_cache';
+
+    // 1. INTENTO DE CACHÉ
+    // Si no forzamos recarga y existen datos guardados...
+    if (!forzarRecarga) {
+        const cachedRaw = sessionStorage.getItem(CACHE_KEY);
+        if (cachedRaw) {
+            console.log("⚡ [ADMIN CACHE] Usando datos en memoria (0 lecturas)");
+            const data = JSON.parse(cachedRaw);
+            
+            // Restauramos las variables globales
+            cacheSolicitudes = data.solicitudes;
+            datosAgrupados = data.agrupados;
+            
+            // Renderizamos todo
+            renderizarTodo();
+            mostrarCargando(false);
+            return; // ¡Salimos sin tocar Firebase!
+        }
+    }
+
+    // 2. FETCH A FIREBASE (Solo si no hay caché o forzamos)
+    console.log("🔥 [ADMIN FIREBASE] Descargando base de datos completa...");
     try {
-        // 1. Traemos las Solicitudes
-        const snap = await getDocs(collection(db, "solicitudes"));
+        // A. Traer Usuarios
+        const usersSnap = await getDocs(collection(db, "usuarios"));
+        const mapaUsuarios = {};
+        usersSnap.forEach(u => {
+            mapaUsuarios[u.data().dni] = { ...u.data(), id: u.id };
+        });
+
+        // B. Traer Solicitudes
+        const solSnap = await getDocs(collection(db, "solicitudes"));
         
-        // 2. NUEVO: Traemos la colección de Cuotas Manuales existente
-        const cuotasSnap = await getDocs(collection(db, "cuotas"));
-        const mapaCuotasManuales = {};
-
-        cuotasSnap.forEach(doc => {
-            const data = doc.data();
-            // Organizamos por Carpeta -> Mes
-            // Estructura: mapa['12345 - NP/1']['2025-04'] = 1680
-            if (!mapaCuotasManuales[data.carpeta]) {
-                mapaCuotasManuales[data.carpeta] = {};
-            }
-            mapaCuotasManuales[data.carpeta][data.mes] = parseFloat(data.monto);
-        });
-
-        // 3. Procesamos las solicitudes e inyectamos los reingresos y las cuotas manuales
-        const promesas = snap.docs.map(async (d) => {
-            const data = d.data();
-            const id = d.id;
-            
-            // Reingresos
-            const reingresosSnap = await getDocs(collection(db, `solicitudes/${id}/reingresos`));
-            const reingresos = reingresosSnap.docs.map(r => r.data());
-            
-            // Inyectar ajustes manuales si existen para esta carpeta
-            const ajustes = mapaCuotasManuales[data.carpeta] || {};
-
-            return { id, ...data, reingresos, ajustesCuota: ajustes }; 
-        });
-
-        cacheSolicitudes = await Promise.all(promesas);
+        const tempSolicitudes = [];
         
-        // ... (El resto del código de agrupación sigue igual) ...
-        const mapa = {};
-        cacheSolicitudes.forEach(sol => {
-            // ... (tu lógica de agrupación existente) ...
-            const dni = sol.dni || 'SIN_DNI';
-            if (!mapa[dni]) {
-                mapa[dni] = { 
-                    nombre: sol.nombre || 'Desconocido', 
-                    dni: dni, 
-                    capitalTotal: 0, 
-                    tasasAcumuladas: 0, 
-                    carpetasActivas: 0, 
-                    listaCarpetas: [] 
-                };
-            }
+        // Procesar solicitudes una por una (para buscar reingresos)
+        // Nota: Esto consume lecturas por subcolección, es inevitable la primera vez.
+        for (const docS of solSnap.docs) {
+            const data = docS.data();
+            const item = { ...data, id: docS.id };
             
-            let cap = parseFloat(String(sol.capital).replace(/[^\d,.-]/g,'').replace(',','.'));
-            if(sol.reingresos) {
-                sol.reingresos.forEach(r => {
-                    cap += parseFloat(String(r.capital).replace(/[^\d,.-]/g,'').replace(',','.'));
-                });
+            // Vincular con datos del usuario (Nombre, etc)
+            if (data.dni && mapaUsuarios[data.dni]) {
+                item.nombreCliente = mapaUsuarios[data.dni].nombre;
+                item.emailCliente = mapaUsuarios[data.dni].mail;
+            } else {
+                item.nombreCliente = "Desconocido/Borrado";
             }
+
+            // C. Traer Reingresos (Subcolección)
+            const reingresosSnap = await getDocs(collection(docS.ref, "reingresos"));
+            item.reingresos = reingresosSnap.docs.map(r => r.data());
+
+            tempSolicitudes.push(item);
+        }
+
+        // D. Actualizar Variables Globales
+        cacheSolicitudes = tempSolicitudes;
+        
+        // Recalcular agrupación por cliente
+        recalcularDatosAgrupados(mapaUsuarios);
+
+        // 3. GUARDAR EN CACHÉ (El secreto del ahorro)
+        // Guardamos todo el estado para la próxima recarga
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+            solicitudes: cacheSolicitudes,
+            agrupados: datosAgrupados
+        }));
+        console.log("💾 [ADMIN CACHE] Base de datos guardada en sesión.");
+
+        renderizarTodo();
+
+    } catch (error) {
+        console.error("Error fatal cargando DB:", error);
+        alert("Error de conexión: " + error.message);
+    } finally {
+        mostrarCargando(false);
+    }
+}
+
+// Función auxiliar para recalcular los datos agrupados (necesaria para el caché)
+function recalcularDatosAgrupados(mapaUsuarios) {
+    datosAgrupados = [];
+    
+    // Iteramos sobre los usuarios base
+    Object.values(mapaUsuarios).forEach(usuario => {
+        // Filtramos las solicitudes de este usuario
+        const carpetasDelCliente = cacheSolicitudes.filter(s => s.dni === usuario.dni);
+        
+        if (carpetasDelCliente.length > 0) {
+            // Calculamos totales
+            let capitalTotal = 0;
+            let activas = 0;
             
-            const tasa = parseFloat(String(sol.ganancia).replace(',', '.'));
+            carpetasDelCliente.forEach(c => {
+                let cap = parseFloat(String(c.capital).replace(/[^\d,.-]/g, '').replace(',', '.'));
+                // Sumar reingresos
+                if(c.reingresos) {
+                    c.reingresos.forEach(r => cap += parseFloat(String(r.capital).replace(/[^\d,.-]/g, '').replace(',', '.')));
+                }
+                capitalTotal += cap;
+                
+                const estado = c.estado ? c.estado.toLowerCase() : 'activa';
+                if(estado === 'activa') activas++;
+            });
 
-            mapa[dni].capitalTotal += cap;
-            mapa[dni].tasasAcumuladas += tasa;
-            
-            if ((sol.estado || 'Activa').toLowerCase() === 'activa') {
-                mapa[dni].carpetasActivas++;
-            }
-            mapa[dni].listaCarpetas.push(sol);
-        });
+            datosAgrupados.push({
+                nombre: usuario.nombre,
+                dni: usuario.dni,
+                email: usuario.mail,
+                capitalTotal: capitalTotal,
+                carpetasActivas: activas,
+                listaCarpetas: carpetasDelCliente
+            });
+        }
+    });
+}
 
-        datosAgrupados = Object.values(mapa);
-        calcularTesoreriaDashboard();
-        actualizarResumenGlobal();
-        console.log("Datos actualizados correctamente (con Cuotas Manuales).");
 
-    } catch (e) {
-        console.error("Error DB:", e);
-        mostrarFeedback("Error", "Fallo al cargar base de datos.", true);
+function invalidarCacheAdmin() {
+    // 1. Borramos el caché viejo para que la PRÓXIMA vez que entres (o des F5) baje datos nuevos.
+    sessionStorage.removeItem('admin_full_db_cache');
+    
+    // 2. Log discreto en consola en lugar de bloquear pantalla
+    console.log("🔄 [Background] Caché invalidado. Sincronización pendiente para próxima recarga.");
+    
+    // 3. Opcional: Recalculamos los totales del dashboard con los datos que tenemos en memoria
+    // (Esto es instantáneo y mantiene los números de arriba actualizados)
+    if (typeof renderizarTodo === 'function') {
+        renderizarTodo(); 
     }
 }
 
@@ -286,6 +345,8 @@ document.getElementById('formNuevaCarpeta').addEventListener('submit', async (e)
         };
 
         await addDoc(collection(db, "solicitudes"), nuevaSolicitud);
+
+        invalidarCacheAdmin();
         
         document.getElementById('modalNuevaInversion').classList.add('hidden');
         mostrarFeedback("¡Carpeta Creada!", `Se generó: ${idFinal}`);
@@ -462,6 +523,8 @@ document.getElementById('formReingreso').addEventListener('submit', async (e) =>
                 periodos: nuevoPlazo
             });
         }
+
+        invalidarCacheAdmin();
 
         mostrarFeedback("¡Reingreso Exitoso!", `Capital agregado. Plazo extendido ${plazoExtra} meses.`);
         document.getElementById('modalFormReingreso').classList.add('hidden');
@@ -685,6 +748,7 @@ window.togglePago = async (id, key, chk) => {
     try {
         if(done) await updateDoc(doc(db,"solicitudes",id), {pagosRealizados: arrayUnion(key)});
         else await updateDoc(doc(db,"solicitudes",id), {pagosRealizados: arrayRemove(key)});
+        invalidarCacheAdmin();
         const item = cacheSolicitudes.find(x=>x.id===id);
         if(item) { if(!item.pagosRealizados) item.pagosRealizados=[]; if(done) item.pagosRealizados.push(key); else item.pagosRealizados = item.pagosRealizados.filter(k=>k!==key); }
     } catch(e) { alert("Error"); chk.checked=!done; }
@@ -1081,6 +1145,8 @@ window.guardarAjusteCuota = async (carpetaNombre, keyPago, inputId) => {
             fechaModificacion: new Date().toISOString()
         });
 
+        invalidarCacheAdmin();
+
         // Actualizar caché local
         const solicitudEnCache = cacheSolicitudes.find(s => s.carpeta === carpetaNombre);
         
@@ -1123,9 +1189,99 @@ window.cerrarEdicion = (rowId, valorOriginal) => {
     // o podríamos buscar el ID de documento en el DOM para llamar a abrirHistorialPagos.
 };
 
-window.cambiarEstado = async (id, sel) => { try { await updateDoc(doc(db,"solicitudes",id), {estado:sel.value}); sel.className = `status-select ${sel.value.toLowerCase()}`; } catch(e) { mostrarFeedback("Error", "No se cambió el estado", true); } };
+// ======================================================
+// 9. UTILIDADES UI (LOADING)
+// ======================================================
+
+function mostrarCargando(activo) {
+    let loader = document.getElementById('loader-global');
+    
+    // Si no existe el elemento en el HTML, lo creamos dinámicamente
+    if (!loader) {
+        loader = document.createElement('div');
+        loader.id = 'loader-global';
+        
+        // Estilos inline para no tocar el CSS
+        Object.assign(loader.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            zIndex: '9999',
+            display: 'none', // Oculto por defecto
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexDirection: 'column',
+            gap: '15px'
+        });
+
+        loader.innerHTML = `
+            <div style="font-size: 3rem;">⏳</div>
+            <div style="font-family: sans-serif; font-size: 1.2rem; color: #333; font-weight: 600;">Procesando...</div>
+        `;
+        
+        document.body.appendChild(loader);
+    }
+
+    // Mostrar u Ocultar
+    loader.style.display = activo ? 'flex' : 'none';
+}
+
+// ======================================================
+// FUNCIÓN DE RENDERIZADO GLOBAL (AGREGAR ESTO)
+// ======================================================
+function renderizarTodo() {
+    console.log("🎨 Renderizando Dashboard...");
+
+    // 1. Actualizar Widget de Tesorería (El cuadro con Ingresos/Egresos del mes)
+    // Verifica que esta función exista en tu archivo (debería estar en la sección 7)
+    if (typeof calcularTesoreriaDashboard === 'function') {
+        calcularTesoreriaDashboard();
+    }
+
+    // 2. Actualizar Resumen Global (La tarjeta grande con Capital Total, etc.)
+    // Esta es la que creamos ayer.
+    if (typeof actualizarResumenGlobal === 'function') {
+        actualizarResumenGlobal();
+    }
+    
+    // 3. Si hay algún modal abierto que necesite refrescarse, podríamos hacerlo aquí.
+    // Por ahora con esto cubrimos el Dashboard principal.
+}
+
+window.cambiarEstado = async (id, sel) => { 
+    // Feedback visual inmediato (Optimista)
+    const valorAnterior = sel.getAttribute('data-prev') || sel.value;
+    sel.disabled = true; 
+
+    try { 
+        // 1. Escritura en Firebase (Fondo)
+        await updateDoc(doc(db,"solicitudes",id), {estado:sel.value}); 
+        
+        // 2. Actualización Local (Memoria)
+        const item = cacheSolicitudes.find(x => x.id === id);
+        if(item) item.estado = sel.value;
+
+        // 3. Invalidación Silenciosa
+        invalidarCacheAdmin();
+        
+        // 4. Actualización UI del select
+        sel.className = `status-select ${sel.value.toLowerCase()}`; 
+        sel.setAttribute('data-prev', sel.value);
+        console.log(`✅ Estado actualizado a: ${sel.value}`);
+
+    } catch(e) { 
+        console.error(e);
+        mostrarFeedback("Error", "No se cambió el estado", true); 
+        sel.value = valorAnterior; // Revertimos si falló
+    } finally {
+        sel.disabled = false;
+    }
+};
 window.editarNotificacion = (id, txt) => { idCarpetaEditando = id; document.getElementById('txtNotificacion').value = (txt && txt!=='undefined') ? txt : ''; document.getElementById('modalNotificacion').classList.remove('hidden'); };
-document.getElementById('btnSaveNotif').addEventListener('click', async()=>{ if(!idCarpetaEditando) return; const val = document.getElementById('txtNotificacion').value.trim(); try { await updateDoc(doc(db,"solicitudes",idCarpetaEditando), {comentario: val}); const item = cacheSolicitudes.find(x=>x.id===idCarpetaEditando); if(item) item.comentario = val; const btn = document.querySelector(`button[onclick*="${idCarpetaEditando}"]`); if(btn) { val.length>0 ? btn.classList.add('active-bell') : btn.classList.remove('active-bell'); btn.setAttribute('onclick', `editarNotificacion('${idCarpetaEditando}', '${val.replace(/'/g, "\\'")}')`); } mostrarFeedback("Guardado", "Mensaje actualizado"); document.getElementById('modalNotificacion').classList.add('hidden'); } catch(e) { mostrarFeedback("Error", e.message, true); } });
+document.getElementById('btnSaveNotif').addEventListener('click', async()=>{ if(!idCarpetaEditando) return; const val = document.getElementById('txtNotificacion').value.trim(); try { await updateDoc(doc(db,"solicitudes",idCarpetaEditando), {comentario: val}); invalidarCacheAdmin(); const item = cacheSolicitudes.find(x=>x.id===idCarpetaEditando); if(item) item.comentario = val; const btn = document.querySelector(`button[onclick*="${idCarpetaEditando}"]`); if(btn) { val.length>0 ? btn.classList.add('active-bell') : btn.classList.remove('active-bell'); btn.setAttribute('onclick', `editarNotificacion('${idCarpetaEditando}', '${val.replace(/'/g, "\\'")}')`); } mostrarFeedback("Guardado", "Mensaje actualizado"); document.getElementById('modalNotificacion').classList.add('hidden'); } catch(e) { mostrarFeedback("Error", e.message, true); } });
 
 // Close handlers
 document.getElementById('closeModal').addEventListener('click',()=>document.getElementById('adminModal').classList.add('hidden'));
